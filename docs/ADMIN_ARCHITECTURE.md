@@ -139,19 +139,6 @@ project-diy/
 - **聯絡顧客的管道**:狀態變更由後端自動寄信到會員 email;需要直接聯繫(例如缺貨換料)時用訂單上的收件電話。
 - **發票資訊不在這一版**,連同電子發票串接放到第五階段。
 
----|---|
-| `orders` | `no`(訂單編號)、`status`、`payment_status`、`customer_name`、`phone`、`email`、`fulfillment`(自取/宅配)、`address`、`need_assembly`、`invoice_type`、`tax_id`、`invoice_title`、`subtotal`、`discount_total`、`shipping_fee`、`total`、`coupon_code`、`customer_note`、`lookup_token` |
-| `order_items` | `order_id`、`product_id`、`code`、`name`、`brand`、`category_name`、`list_price`、`unit_price`、`qty`、`line_total` — 全部是快照 |
-| `order_discounts` | `order_id`、`source_type`(促銷/折扣券/手動)、`source_id`、`label`、`amount` — 快照 |
-| `order_events` | `order_id`、`type`、`from_status`、`to_status`、`note`、`actor`、`created_at` — 狀態變更、改單、內部備註都記在這裡 |
-
-### 設計重點
-
-- **成立訂單時重新計價。** `POST /api/orders` 只收「商品代號 + 數量 + 券號」,後端自己算金額,不採用前台送來的數字。若與顧客畫面上的金額不同(剛好改價或活動結束),回傳新報價讓顧客確認後再送一次。
-- **待確認階段可以改單。** 常見情況是某個零件缺貨,要換同級品。改單 = 重新計價 + 寫一筆 `order_events`。店家另外議價的部分用「手動調整」折扣列表示,不直接改總額,明細才對得起來。
-- **不做會員。** **預設**顧客以「訂單編號 + 電話」或信裡的專屬連結(`lookup_token`)查詢訂單。
-- **發票欄位先留著**(二聯 / 三聯、統編、抬頭),電子發票串接之後再做。
-
 ---
 
 ## 5. 行銷(促銷活動)
