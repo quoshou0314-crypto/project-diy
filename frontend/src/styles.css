@@ -1,0 +1,1338 @@
+/* 風格沿用 project-quotation 的前端(它的 frontend/src/styles.css 與 docs/TO_STYLE.md):
+   - 色盤只有 :root 這一份;:root 以外不寫 hex / rgb / color-mix,要新顏色先在這裡加 token。
+   - 顏色語言:主色調中性(選取、hover、停用一律灰階);藍 = 引導(主要鍵、連結、焦點、目前位置)、
+     紅 = 折扣(折抵、促銷;使用者指定)與錯誤,各有自己的 token。不拿顏色做裝飾或分類。
+   - 尺寸:字 13px、控制項高 28px 圓角 4px、表框與卡片圓角 8px。 */
+:root {
+  --bg: #fbfbfb;
+  --paper: #ffffff; /* 輸入框與表格的底:說「這裡是資料」 */
+  --thead: #f7f7f7; /* 表頭的底 */
+  --inverse: #ffffff; /* 強調色上的字 */
+  --fg: #16191d;
+  --muted: #6b7280;
+  --hint: #6d7480; /* placeholder(白底上對比 4.7:1) */
+  --faint: #b6bcc5; /* 只給裝飾用的分隔符號,不拿來寫字 */
+  --line: #dfdfdf;
+  --trough: #efefef; /* 膠囊式分頁的槽 */
+  --select: #f3f3f3; /* hover */
+  --picked: #ebebeb; /* 選取(已加入的列、目前分類的估價單列) */
+  --accent: #2e57a5;
+  --accent-hi: #4470c4; /* 主要鍵 hover:--accent 提亮一階 */
+  --ok: #15803d;
+  --err: #b91c1c;
+  --sale: #b91c1c; /* 折扣:已折抵金額、促銷標籤(與 --err 同值,意思不同) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --h-ctl: 28px;
+  --w-add: 64px; /* 購物車鍵與數量步進器的寬度(兩者同大);數量最多 99,中間只需放兩位數 */
+  --h-nav: 44px;
+  --h-head: 49px; /* 估價單標題列與類別頁籤列同高(含底線),兩邊的分割線才會對齊 */
+  --h-row: 56px; /* 商品列固定同高 */
+  --r-ctl: 4px;
+  --r-box: 8px;
+  --fs: 13px;
+  --fs-sm: 12px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 22px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.22);
+  --backdrop: rgba(0, 0, 0, 0.4); /* 疊加框的遮罩 */
+  --shadow-pop: 0 4px 16px rgba(0, 0, 0, 0.14);
+  --shadow-thumb: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', 'Microsoft JhengHei', system-ui, sans-serif;
+  font-size: var(--fs);
+  color: var(--fg);
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+/* ---------- 基本元件 ---------- */
+button {
+  font: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s1);
+  padding: 0 var(--s3);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--r-ctl);
+  cursor: pointer;
+  height: var(--h-ctl);
+  color: var(--fg);
+  line-height: 1;
+}
+button:hover:not(:disabled) {
+  background: var(--select);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button.primary {
+  background: var(--accent);
+  color: var(--inverse);
+  border-color: var(--accent);
+}
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hi);
+  border-color: var(--accent-hi);
+}
+button.link {
+  border: 0;
+  color: var(--accent);
+  padding: 0;
+  height: auto;
+  background: none;
+  font-weight: 400;
+}
+input,
+select {
+  font: inherit;
+  color: var(--fg);
+  height: var(--h-ctl);
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--paper);
+}
+input::placeholder {
+  color: var(--hint);
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+s {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- 外殼:頂列 › 估價單 | 商品 ---------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+nav.topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: var(--h-nav);
+  padding: 0 var(--s4);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+nav .brand {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+.shell {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+}
+
+/* ---------- 估價單 ---------- */
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+}
+.menu-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  height: var(--h-head);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--line);
+}
+.menu-head h1 {
+  flex: 1;
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+.sheet-close {
+  display: none;
+}
+.menu-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s1) 0;
+}
+.menu-empty {
+  margin: 0;
+  padding: var(--s5) var(--s4);
+  text-align: center;
+  color: var(--muted);
+}
+/* 每個分類一段:分類名一行,品項在下面 */
+.slot {
+  padding: var(--s1) 0;
+}
+.slot.active {
+  background: var(--picked);
+}
+.cat {
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  padding: var(--s1) var(--s4) 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+.cat:hover:not(:disabled) {
+  background: none;
+}
+.slot.active .cat {
+  color: var(--accent);
+  font-weight: 600;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-right: var(--s4);
+}
+.pick {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: var(--s1) 0 var(--s1) var(--s4);
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+}
+.pick:hover:not(:disabled) {
+  background: none;
+}
+.qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.qty button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  font-weight: 400;
+}
+.qty button:hover:not(:disabled) {
+  background: var(--trough);
+  color: var(--fg);
+}
+.price {
+  flex: 0 0 4.8em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4) var(--s4);
+  border-top: 1px solid var(--line);
+}
+.sum-row,
+.discounts summary {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+.discounts {
+  color: var(--sale);
+}
+.discounts summary {
+  cursor: pointer;
+  list-style: none;
+}
+.discounts summary::-webkit-details-marker {
+  display: none;
+}
+.discounts summary span:first-child::after {
+  content: ' ▸';
+  font-size: 10px;
+}
+.discounts[open] summary span:first-child::after {
+  content: ' ▾';
+}
+.discounts .sum-row {
+  padding: 3px 0 0 var(--s3);
+  font-size: var(--fs-sm);
+}
+.sum-row.total {
+  align-items: baseline;
+  font-weight: 600;
+}
+.sum-row.total strong {
+  font-size: var(--fs-xl);
+}
+.coupon {
+  display: flex;
+  gap: var(--s2);
+}
+.coupon input {
+  flex: 1;
+  min-width: 0;
+}
+.coupon-open {
+  justify-self: start;
+}
+.coupon-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.coupon {
+  align-items: center;
+}
+.coupon-err {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--err);
+}
+input[aria-invalid='true'] {
+  border-color: var(--err);
+}
+/* 相容性提醒:裝不起來的組合,用錯誤色 */
+.warnings {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--err);
+}
+.warnings li::before {
+  content: '⚠ ';
+}
+.menu-empty .link {
+  display: inline;
+}
+.actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s2);
+}
+
+/* ---------- 商品 ---------- */
+.products {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto; /* 只上下捲;表格依寬度決定欄數,不會左右捲 */
+  padding: 0 14px 60px;
+}
+/* 頂列的類別頁籤(支援層級):頁籤是大類,點開下拉選底下的類別。
+   目前所在的大類:粗體 + 藍色底線(藍 = 目前位置),後面接目前的類別名 */
+.tabs-wrap {
+  position: relative;
+  margin: 0 -14px;
+}
+/* 頁籤放不下時可以左右捲:還有頁籤的那一邊蓋一段漸層加箭頭,提示「這邊還有」 */
+.tabs-wrap::before,
+.tabs-wrap::after {
+  position: absolute;
+  top: 0;
+  bottom: 1px;
+  z-index: 1;
+  width: 36px;
+  display: none;
+  align-items: center;
+  color: var(--muted);
+  font-size: var(--fs-lg);
+  pointer-events: none;
+}
+.tabs-wrap.more-left::before {
+  content: '‹';
+  display: flex;
+  left: 0;
+  padding-left: 6px;
+  background: linear-gradient(to right, var(--bg) 40%, transparent);
+}
+.tabs-wrap.more-right::after {
+  content: '›';
+  display: flex;
+  justify-content: flex-end;
+  right: 0;
+  padding-right: 6px;
+  background: linear-gradient(to left, var(--bg) 40%, transparent);
+}
+.tabs {
+  display: flex;
+  height: var(--h-head);
+  gap: var(--s1);
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab {
+  flex: none;
+  height: 100%;
+  padding: 0 var(--s3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.tab:hover:not(:disabled),
+.tab[aria-expanded='true'] {
+  background: none;
+  color: var(--fg);
+}
+.tab.on {
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+.tab-current {
+  font-weight: 400;
+  color: var(--muted);
+}
+.tab-current::before {
+  content: '›';
+  margin: 0 var(--s1);
+  color: var(--faint);
+}
+.tab-menu {
+  position: fixed;
+  z-index: 30;
+  min-width: 160px;
+  padding: var(--s1) 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  box-shadow: var(--shadow-pop);
+}
+.tab-menu .item {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s4);
+  width: 100%;
+  height: auto;
+  padding: 6px var(--s3) 6px 30px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.tab-menu .item:hover:not(:disabled) {
+  background: var(--select);
+}
+.tab-menu .item[aria-checked='true']::before {
+  content: '✓';
+  position: absolute;
+  left: var(--s3);
+  color: var(--accent);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0; /* 用內距留白,不靠固定高度:手機的輸入框比較高,固定高度會讓它貼到下一列 */
+  margin-top: var(--s1);
+}
+.toolbar input {
+  flex: 1;
+  min-width: 0;
+}
+/* 規格欄位開關:開 = 白底 + 勾,關 = 灰底灰字(中性,不上色;不用刪除線,那看起來像「不能用」) */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  height: 24px;
+  padding: 0 var(--s2);
+  font-weight: 400;
+  background: var(--thead);
+  color: var(--muted);
+}
+.chip.on {
+  background: var(--paper);
+  color: var(--fg);
+}
+.chip.on::before {
+  content: '✓';
+  font-size: 11px;
+}
+/* 手機的篩選鍵(放在規格開關列):一般的框線鍵;有篩選或排序時變藍 */
+.filter-btn {
+  font-weight: 400;
+}
+.filter-btn.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.count {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s2);
+  color: var(--muted);
+}
+/* 表格 = 白紙 + 外框,表頭灰底黑粗字 */
+/* 規格列:左邊規格開關,右邊顯示方式 */
+.filter {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+.filter .chips {
+  flex: 1;
+  min-width: 0;
+}
+.view-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+/* 膠囊式切換(清單 / 格狀):灰槽裡兩格,選到的是浮起的白色滑塊 */
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--r-ctl);
+  background: var(--trough);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.seg button {
+  height: 24px;
+  padding: 0 var(--s2);
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+}
+.seg button:hover:not(:disabled) {
+  background: none;
+  color: var(--fg);
+}
+.seg button.on {
+  background: var(--paper);
+  color: var(--fg);
+  box-shadow: var(--shadow-thumb);
+}
+
+/* 格狀:一張商品卡一項商品 —— 主圖、品名、規格、價格鍵。欄數依寬度自動排 */
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: var(--s3);
+}
+/* 每張卡有四段(圖、品名、規格、價格),各段的高度跟同一排的其他卡共用(subgrid):
+   品名一行或兩行、有沒有促銷標籤都一樣,同一排的規格列與價格列會上下對齊 */
+.card {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  row-gap: var(--s2);
+  align-content: start;
+  min-width: 0;
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.card.picked {
+  background: var(--picked);
+}
+.card-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  background: var(--thead);
+  color: var(--hint);
+  font-size: 28px;
+  cursor: zoom-in;
+}
+.card-img:hover:not(:disabled) {
+  background: var(--thead);
+  border-color: var(--muted);
+}
+.card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--paper);
+}
+.card-name {
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.card-specs {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+/* 每項規格固定一行(太長的值以 … 截斷,完整內容在商品詳情),每張卡的同一項規格才會在同一個高度 */
+.card-specs div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  min-width: 0;
+  line-height: 1.4;
+}
+.card-specs dt {
+  flex: none;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.card-specs dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 價格鍵貼在商品卡底部:同一排的卡片內容長短不同,按鈕仍然對齊 */
+.card-price {
+  align-self: end;
+  padding-top: var(--s1);
+}
+.card-price .add {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* 表格的寬度基準:欄數依這一塊的寬度決定,表格永遠剛好填滿,不會左右捲 */
+.table-fit {
+  margin-top: var(--s3);
+}
+.table-wrap {
+  overflow: hidden; /* 只為了圓角裁掉表頭底色 */
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.spec-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.spec-table th,
+.spec-table td {
+  padding: 4px var(--s2);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.spec-table thead th {
+  height: 32px;
+  background: var(--thead);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.spec-table tbody tr {
+  height: var(--h-row);
+}
+/* 品牌併進品名的版面(一欄規格都放不下時):品名格多一行,列高跟著加高,所有列仍然同高 */
+.spec-table.stacked tbody tr {
+  height: 68px;
+}
+.spec-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.spec-table tbody tr:hover {
+  background: var(--select);
+}
+.spec-table tbody tr.picked {
+  background: var(--picked);
+}
+.spec-table td {
+  font-variant-numeric: tabular-nums;
+}
+.th-btn {
+  height: auto;
+  margin-left: -4px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  font-weight: 600;
+}
+.th-btn:hover:not(:disabled),
+.th-btn[aria-expanded='true'] {
+  background: var(--picked);
+}
+.th-btn.on {
+  color: var(--accent);
+}
+.caret {
+  font-size: 10px;
+  color: var(--muted);
+}
+.th-btn.on .caret {
+  color: var(--accent);
+}
+.badge {
+  font-size: var(--fs-sm);
+}
+.thumb {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--paper);
+  object-fit: contain;
+}
+.thumb.placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--thead);
+  color: var(--hint);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.cell-model {
+  font-weight: 600;
+  line-height: 1.3;
+}
+.model-brand {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+.cell-model.tappable {
+  cursor: pointer;
+}
+.model-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.tag {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--sale);
+}
+.spec-table th:last-child,
+.spec-table .cell-price {
+  text-align: right;
+}
+.spec-table th:last-child .th-btn {
+  margin: 0 -4px 0 0;
+}
+/* 加入估價單的控制項,排成一行:原價(有促銷時,刪除線) 售價 [購物車鍵];加入後購物車鍵換成數量步進器。
+   放不下一行時(手機、窄的商品卡)自動折成兩行:價格在上,鍵在下 */
+.add {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px var(--s4); /* 價格與按鍵之間留寬一點,看得出是兩欄 */
+  font-variant-numeric: tabular-nums;
+}
+.add-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s1);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+.add-price strong {
+  font-size: var(--fs-lg); /* 售價是這一列最重要的數字:比內文大一級 */
+  font-weight: 600;
+}
+/* 清單(排成一行時):原價、售價各佔一個固定寬度的小欄並靠右,每一列的原價、售價、按鍵才會上下對齊 */
+.spec-table:not(.stacked) .add-price {
+  display: inline-grid;
+  grid-template-columns: 50px 68px;
+  column-gap: var(--s3);
+  align-items: baseline;
+  justify-items: end;
+}
+.spec-table:not(.stacked) .add-price strong {
+  grid-column: 2;
+}
+/* 手機清單(品牌併進品名的版面):價格與按鍵仍然並排、不上下疊;為了省寬度,原價疊在售價上面、靠右 */
+.spec-table.stacked .add {
+  flex-wrap: nowrap;
+  gap: var(--s3);
+}
+.spec-table.stacked .add-price {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+/* 商品卡:原價疊在售價上面、靠左,按鍵靠右;每張卡的價格區同高 */
+.card-price .add-price {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  min-height: 38px;
+}
+/* 購物車鍵 = 這一列的主要鍵(加入估價單)。和步進器同寬同高(--w-add × --h-ctl),加入前後版面不動 */
+.cart-btn {
+  flex: none;
+  width: var(--w-add);
+  padding: 0;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--inverse);
+}
+.cart-btn:hover:not(:disabled) {
+  background: var(--accent-hi);
+  border-color: var(--accent-hi);
+}
+/* 數量步進器(− 數量 +):藍框白底,出現在購物車鍵原本的位置 */
+.stepper {
+  flex: none;
+  display: inline-flex;
+  align-items: stretch;
+  width: var(--w-add);
+  height: var(--h-ctl);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-ctl);
+  background: var(--paper);
+  overflow: hidden;
+}
+.stepper button {
+  flex: none;
+  width: 22px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-md);
+}
+.stepper button:focus-visible {
+  outline-offset: -2px;
+}
+.stepper span {
+  flex: 1;
+  min-width: 18px;
+  align-self: center;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* 表頭的篩選選單 */
+.th-menu {
+  position: fixed;
+  z-index: 30;
+  padding: var(--s1) 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  box-shadow: var(--shadow-pop);
+}
+/* 選單項(排序):勾起的那一項前面有勾 */
+.th-menu .item {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  padding: 6px var(--s3) 6px 30px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-weight: 400;
+  position: relative;
+}
+.th-menu .item:hover:not(:disabled) {
+  background: var(--select);
+}
+.th-menu .item[aria-checked='true']::before {
+  content: '✓';
+  position: absolute;
+  left: var(--s3);
+  color: var(--accent);
+}
+.th-menu hr {
+  height: 1px;
+  margin: var(--s1) 0;
+  border: 0;
+  background: var(--line);
+}
+.th-menu-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.th-menu label {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 6px var(--s3);
+  cursor: pointer;
+}
+.th-menu label:hover {
+  background: var(--select);
+}
+.th-menu input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+.th-menu .link {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  margin-top: var(--s1);
+  padding: 6px var(--s3) 2px;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
+.empty {
+  margin: var(--s5) 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ---------- 商品詳情疊加框 ---------- */
+.thumb-btn {
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: var(--r-ctl);
+  cursor: zoom-in;
+}
+.thumb-btn:hover:not(:disabled) {
+  background: none;
+}
+.thumb-btn:hover .thumb {
+  border-color: var(--muted);
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--s4);
+  background: var(--backdrop);
+}
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 100%);
+  max-height: calc(100vh - 2 * var(--s4)); /* 超過視窗高度時框內自己捲 */
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  box-shadow: var(--shadow-modal);
+}
+.dialog-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s2) var(--s2) var(--s4);
+  border-bottom: 1px solid var(--line);
+}
+.dialog-head h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+.dialog-close {
+  width: var(--h-ctl);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 20px;
+  font-weight: 400;
+}
+.dialog-close:hover:not(:disabled) {
+  color: var(--fg);
+}
+/* 疊加框底列:價格 | 數量 | 加入估價單;不跟著內容捲動 */
+.dialog-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--line);
+}
+.dialog-price {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  font-variant-numeric: tabular-nums;
+}
+.dialog-price strong {
+  font-size: var(--fs-lg);
+}
+.dialog-foot .qty {
+  color: var(--fg);
+}
+.dialog-foot .qty button {
+  width: var(--h-ctl);
+  height: var(--h-ctl);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--fg);
+}
+.dialog-foot .qty button:first-child {
+  margin-right: var(--s2);
+}
+.dialog-foot .qty button:last-child {
+  margin-left: var(--s2);
+}
+.dialog-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s4);
+}
+.gallery-main {
+  width: min(240px, 100%); /* 主圖不佔滿整個框 */
+  margin: 0 auto;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  background: var(--paper);
+  overflow: hidden;
+}
+.gallery-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.gallery-placeholder {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s1);
+  height: 100%;
+  background: var(--thead);
+  color: var(--hint);
+  font-size: 32px;
+  font-weight: 600;
+}
+.gallery-placeholder span {
+  font-size: var(--fs);
+  font-weight: 400;
+}
+.gallery-thumbs {
+  display: flex;
+  justify-content: center;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  overflow-x: auto;
+}
+.gallery-thumb {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: var(--thead);
+  color: var(--hint);
+  font-weight: 400;
+  overflow: hidden;
+}
+.gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--paper);
+}
+.gallery-thumb.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--fg);
+}
+.dialog-body hr {
+  height: 1px;
+  margin: var(--s4) 0;
+  border: 0;
+  background: var(--line);
+}
+.dialog-body h3 {
+  margin: var(--s4) 0 var(--s2);
+  font-size: var(--fs-md);
+}
+.dialog-body hr + h3 {
+  margin-top: 0;
+}
+.dialog-desc {
+  margin: 0;
+  line-height: 1.6;
+}
+.dialog-specs {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  background: var(--paper);
+}
+.dialog-specs th,
+.dialog-specs td {
+  padding: 6px var(--s3);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.dialog-specs tr:last-child th,
+.dialog-specs tr:last-child td {
+  border-bottom: 0;
+}
+.dialog-specs th {
+  width: 32%;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* ---------- 篩選面板(沿用疊加框的外殼) ---------- */
+.th-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+.sheet-group + .sheet-group {
+  margin-top: var(--s4);
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--s2);
+}
+.sheet-head h3 {
+  flex: 1;
+  margin: 0;
+}
+/* 可勾選的鍵(篩選值、排序方向):勾起 = 藍框 + 正文色,不填滿 */
+.pick-chip {
+  font-weight: 400;
+  padding: 0 var(--s2);
+}
+.pick-chip.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.sheet-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--line);
+}
+
+.mobilebar {
+  display: none;
+}
+
+/* ---------- 手機:商品為主,估價單收成底部列 ---------- */
+@media (max-width: 820px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--s2);
+  }
+  .app {
+    height: auto;
+    min-height: 100vh;
+  }
+  .shell {
+    display: block;
+  }
+  .products {
+    overflow: visible;
+    padding-bottom: 76px;
+  }
+  .menu {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    display: none;
+  }
+  .menu.open {
+    display: flex;
+  }
+  .sheet-close {
+    display: inline-flex;
+  }
+  .mobilebar {
+    display: flex;
+    justify-content: space-between;
+    position: fixed;
+    left: var(--s3);
+    right: var(--s3);
+    bottom: var(--s3);
+    z-index: 20;
+    height: 44px;
+    padding: 0 var(--s4);
+    border-radius: var(--r-box);
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--inverse);
+    box-shadow: var(--shadow-pop);
+  }
+  .mobilebar:hover:not(:disabled) {
+    background: var(--accent-hi);
+  }
+  .mobilebar strong {
+    font-size: var(--fs-lg);
+  }
+}
+
+/* ---------- 觸控:窄螢幕或手指操作時,控制項放大到好按的尺寸(約 36–44px) ---------- */
+@media (max-width: 820px), (pointer: coarse) {
+  :root {
+    --h-ctl: 40px;
+    --h-row: 74px;
+    --w-add: 80px;
+  }
+  /* 商品卡:價格在上,購物車鍵或步進器在下並撐滿卡片寬度(兩者仍然同大) */
+  .card-price .add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .card-price .cart-btn,
+  .card-price .stepper {
+    width: 100%;
+  }
+  .spec-table.stacked tbody tr {
+    height: 74px;
+  }
+  /* 輸入框字級 16px:小於這個大小,iOS 聚焦時會自動放大整個頁面 */
+  input,
+  select {
+    font-size: 16px;
+  }
+  button.link {
+    min-height: 36px;
+    padding: 0 var(--s1);
+  }
+  .chip {
+    height: 36px;
+    padding: 0 var(--s3);
+  }
+  .seg button {
+    height: 36px; /* 加上槽的內距 = 40px,和同一列的篩選鍵同高 */
+    padding: 0 var(--s3);
+  }
+  .th-btn {
+    min-height: 36px;
+    padding: 2px var(--s2);
+  }
+  .spec-table thead th {
+    height: 44px;
+  }
+  .qty button {
+    width: 36px;
+    height: 36px;
+  }
+  .stepper button {
+    width: 30px;
+  }
+  .tab-menu .item,
+  .th-menu .item,
+  .th-menu label {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .th-menu input {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* ---------- 列印:只印估價單 ---------- */
+@media print {
+  nav.topbar,
+  .backdrop,
+  .products,
+  .mobilebar,
+  .actions,
+  .coupon,
+  .coupon-err,
+  .link,
+  .qty button {
+    display: none !important;
+  }
+  .app {
+    height: auto;
+  }
+  .shell {
+    display: block;
+  }
+  .menu {
+    display: flex !important;
+    position: static;
+    border: 0;
+  }
+  .menu-body {
+    overflow: visible;
+  }
+  .slot.active {
+    background: none;
+  }
+  .slot.active .cat {
+    color: var(--muted);
+    font-weight: 400;
+  }
+}
