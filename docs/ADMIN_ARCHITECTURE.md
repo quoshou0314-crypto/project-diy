@@ -11,9 +11,9 @@
 
 ```
 project-diy/
-├── frontend/   前台估價頁(已存在)      → 讀 /api/catalog、/api/quote、送出 /api/orders
+├── frontend/   前台估價頁(已存在)      → 讀 /api/catalog、/api/quote、送出 /api/orders、會員登入
 ├── admin/      後台管理介面(新)        → 讀寫 /api/admin/*
-├── backend/    API 伺服器(新)          → 計價引擎、訂單、權限
+├── backend/    API 伺服器(新)          → 計價引擎、訂單、會員、後台權限
 └── shared/     前後台共用的型別(新)    → 由 frontend/src/types.ts 搬過來擴充
 ```
 
@@ -23,12 +23,14 @@ project-diy/
 | 資料庫 | PostgreSQL | 訂單需要交易;商品規格每個分類不同,用 JSONB 欄位存最省事 |
 | 後台介面 | React + Vite(與前台同一套) | 不必多學一套工具;後台與前台分開打包,後台程式碼不會送到顧客瀏覽器 |
 | 圖片 | 物件儲存(S3 相容) | 資料庫只存網址 |
+| 會員登入 | 第三方 email 認證(**預設** Google 登入) | 不自己存密碼、不自己寄驗證信;後端只驗證第三方發的憑證 |
 
 三條貫穿所有模組的原則:
 
 1. **金額一律由後端算。** 前台只顯示 `/api/quote` 的結果(`pricing.ts` 開頭的註解已經是這個方向)。折扣券清單不能再出現在前台程式碼裡,否則任何人都看得到所有券號。
 2. **訂單存快照。** 訂單成立時把品名、單價、折扣明細整份複製進訂單,之後商品改價、促銷下架都不影響舊訂單。
 3. **金額用整數新台幣、含稅。** 與目前 `Product.price` 一致。
+4. **會員只存在後端,後台沒有會員模組。** 見[第 4 節的會員](#會員)。
 
 ---
 
@@ -37,8 +39,8 @@ project-diy/
 ```
 總覽          今日訂單、待處理數、近 30 天營業額、熱門商品
 訂單
- ├ 訂單列表    依狀態、日期、電話、訂單編號搜尋
- └ 訂單詳情    明細、狀態變更、改單、內部備註、列印
+ ├ 訂單列表    依狀態、日期、收件電話、訂單編號搜尋
+ └ 訂單詳情    明細、寄送資訊、狀態變更、改單、內部備註、列印
 商品
  ├ 商品列表    搜尋、上下架、批次改價
  ├ 分類與規格  分類排序、分組(周邊配件)、各分類的規格欄位
@@ -56,8 +58,10 @@ project-diy/
  ├ 付款方式
  ├ 訂單規則    估價有效天數、訂單編號格式、折扣疊加規則
  ├ 通知        顧客與店家的通知信
- └ 帳號與權限
+ └ 帳號與權限  後台人員帳號(不含會員)
 ```
+
+後台沒有「會員」選單:不能瀏覽會員名單,也不能查看或修改會員資料。
 
 ---
 
@@ -90,7 +94,7 @@ project-diy/
 ### 流程
 
 ```
-顧客:估價單 → 填聯絡資料與取貨方式 → 送出
+顧客:估價單 → 登入(第三方 email 認證)→ 填寄送資訊 → 送出
                                         │
                                         ▼
       待確認 ──► 已確認 ──► 已付款 ──► 備貨/組裝中 ──► 可取貨/已出貨 ──► 已完成
@@ -100,10 +104,42 @@ project-diy/
 
 **預設**:送出後由店家確認貨況與價格,再通知顧客付款(轉帳或到店付)。線上金流放在第二階段,屆時「已確認 → 已付款」改由金流回呼自動推進,其餘不變。
 
+### 會員
+
+會員由前台直接對後端登入,整個流程不經過後台。
+
+1. 顧客在前台按登入,導向第三方完成 email 認證。
+2. 前台把第三方發的憑證交給 `POST /api/auth/login`,後端向第三方驗證後建立登入狀態。
+3. 第一次登入時後端自動建立會員紀錄,沒有另外的註冊步驟。
+
+| 表 | 主要欄位 |
+|---|---|
+| `members` | `id`、`provider`、`provider_subject`(第三方的使用者識別碼)、`email`、`created_at`、`last_login_at` |
+
+- **瀏覽與試算不需登入,送出訂單才需要。** 估價與分享連結維持現在的體驗。
+- **後端只存識別身分所需的最少資料**,不存密碼、不存個人檔案。
+- **email 只給後端寄通知信用**,不出現在後台畫面上。
+- **`members` 沒有任何後台 API。** `/api/admin/*` 底下不提供會員的列表、查詢或修改。
+
 ### 資料表
 
 | 表 | 主要欄位 |
 |---|---|
+| `orders` | `no`(訂單編號)、`member_id`、`status`、`payment_status`、`fulfillment`(自取/宅配)、`recipient_name`、`recipient_phone`、`address`(宅配才有)、`need_assembly`、`subtotal`、`discount_total`、`shipping_fee`、`total`、`coupon_code`、`customer_note` |
+| `order_items` | `order_id`、`product_id`、`code`、`name`、`brand`、`category_name`、`list_price`、`unit_price`、`qty`、`line_total` — 全部是快照 |
+| `order_discounts` | `order_id`、`source_type`(促銷/折扣券/手動)、`source_id`、`label`、`amount` — 快照 |
+| `order_events` | `order_id`、`type`、`from_status`、`to_status`、`note`、`actor`、`created_at` — 狀態變更、改單、內部備註都記在這裡 |
+
+### 設計重點
+
+- **後台訂單只顯示必要的寄送資訊**:取貨方式、收件人姓名、收件電話、宅配地址。這些是顧客送出訂單時填的,屬於這張訂單,不是會員資料。後台 API 回傳訂單時不帶會員的 email 或其他會員欄位,店員無法從訂單反查會員。
+- **成立訂單時重新計價。** `POST /api/orders` 只收「商品代號 + 數量 + 券號 + 寄送資訊」,後端自己算金額,不採用前台送來的數字。若與顧客畫面上的金額不同(剛好改價或活動結束),回傳新報價讓顧客確認後再送一次。
+- **待確認階段可以改單。** 常見情況是某個零件缺貨,要換同級品。改單 = 重新計價 + 寫一筆 `order_events`。店家另外議價的部分用「手動調整」折扣列表示,不直接改總額,明細才對得起來。
+- **顧客登入後在前台查自己的訂單**(`GET /api/me/orders`),只看得到自己的。
+- **聯絡顧客的管道**:狀態變更由後端自動寄信到會員 email;需要直接聯繫(例如缺貨換料)時用訂單上的收件電話。
+- **發票資訊不在這一版**,連同電子發票串接放到第五階段。
+
+---|---|
 | `orders` | `no`(訂單編號)、`status`、`payment_status`、`customer_name`、`phone`、`email`、`fulfillment`(自取/宅配)、`address`、`need_assembly`、`invoice_type`、`tax_id`、`invoice_title`、`subtotal`、`discount_total`、`shipping_fee`、`total`、`coupon_code`、`customer_note`、`lookup_token` |
 | `order_items` | `order_id`、`product_id`、`code`、`name`、`brand`、`category_name`、`list_price`、`unit_price`、`qty`、`line_total` — 全部是快照 |
 | `order_discounts` | `order_id`、`source_type`(促銷/折扣券/手動)、`source_id`、`label`、`amount` — 快照 |
@@ -146,12 +182,12 @@ project-diy/
 | 表 | 主要欄位 |
 |---|---|
 | `coupons` | `code`(唯一,不分大小寫)、`label`、`kind`(固定金額/百分比)、`value`、`cap`、`min_spend`、`starts_at`、`ends_at`、`usage_limit`、`per_customer_limit`、`enabled` |
-| `coupon_redemptions` | `coupon_id`、`order_id`、`phone`、`amount`、`created_at` |
+| `coupon_redemptions` | `coupon_id`、`order_id`、`member_id`、`amount`、`created_at` |
 
 ### 設計重點
 
 - **使用次數在成立訂單的同一筆交易內扣**,避免最後一張券被兩個人同時用掉。訂單取消時退回。
-- **沒有會員,每人限用次數以電話判斷。** 擋不了有心人換號碼,但足以應付一般情況。
+- **每人限用次數以會員判斷。** 後台的使用紀錄只列訂單編號、金額與時間,不顯示是哪位會員。
 - **試算時不洩漏券的存在。** `/api/quote` 對「查無此券」「已過期」「已用完」的回應要一致地有限,並對同一來源的嘗試次數設上限,避免被猜券號。
 - **一張訂單限用一張券**,與目前前台相同。
 - **第二階段**:限定分類或商品適用、批次產生一次性券號。
@@ -172,6 +208,8 @@ project-diy/
 | 帳號與權限 | 後台帳號、角色 | 見下 |
 
 ### 帳號與權限
+
+這裡管的是後台人員,與會員是兩套完全分開的帳號與登入。
 
 | 表 | 主要欄位 |
 |---|---|
@@ -206,14 +244,15 @@ project-diy/
 |---|---|---|
 | 前台 | `GET /api/catalog` | 分類、規格、上架商品、進行中的單品折扣(要顯示在商品卡上)、賣場公開資料 |
 | 前台 | `POST /api/quote` | 試算:`{ items, coupon }` → 報價 |
-| 前台 | `POST /api/orders` | 送出訂單 |
-| 前台 | `GET /api/orders/lookup` | 顧客查詢訂單 |
+| 前台 | `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/me` | 會員登入(驗證第三方憑證)、登出、目前登入狀態 |
+| 前台(需登入) | `POST /api/orders` | 送出訂單 |
+| 前台(需登入) | `GET /api/me/orders` | 會員查自己的訂單 |
 | 後台 | `POST /api/admin/auth/login` 等 | 登入、登出 |
 | 後台 | `/api/admin/orders`、`/products`、`/categories`、`/brands`、`/promotions`、`/coupons`、`/settings`、`/users` | 各模組的列表、新增、修改 |
 | 後台 | `POST /api/admin/orders/:id/transition` | 狀態變更(後端檢查是否為允許的轉換) |
 | 後台 | `POST /api/admin/products/import` | 批次改價 |
 
-前台改動:`data.ts` 換成讀 `/api/catalog`;`pricing.ts` 換成呼叫 `/api/quote`(輸入停頓後才送出,避免每按一次數量就打一次);新增送出訂單的表單。
+前台改動:`data.ts` 換成讀 `/api/catalog`;`pricing.ts` 換成呼叫 `/api/quote`(輸入停頓後才送出,避免每按一次數量就打一次);新增會員登入、送出訂單的表單、「我的訂單」頁。
 
 ---
 
@@ -222,7 +261,8 @@ project-diy/
 | # | 問題 | 目前預設 | 改了會影響 |
 |---|---|---|---|
 | 1 | 訂單是「線上直接付款」還是「送出後由店家確認再付款」? | 店家確認後線下付款,金流放第二階段 | 訂單狀態流程、是否要先串金流 |
-| 2 | 顧客需要註冊登入嗎? | 不需要,用電話 + 訂單編號查詢 | 折扣券每人限用的判斷方式、是否要做會員模組 |
+| 2 | ~~顧客需要註冊登入嗎?~~ | **已定**:第三方 email 認證;會員只存在後端,後台不管理會員;訂單只顯示必要寄送資訊 | — |
+| 2a | 第三方認證用哪一家? | Google 登入 | 只影響後端驗證憑證的那一段與前台登入按鈕 |
 | 3 | 庫存要管數量嗎? | 只標示現貨 / 調貨 / 缺貨 | 商品表、成立訂單時是否扣庫存 |
 | 4 | 後端技術 | Node.js + TypeScript + PostgreSQL | 整個 `backend/` |
 | 5 | 後台角色 | 店長、店員兩種 | 權限檢查的細緻程度 |
@@ -238,6 +278,6 @@ project-diy/
 |---|---|---|
 | 1 | `backend/` 骨架、資料庫、後台登入;商品 / 分類 / 品牌的 API 與後台頁面;`/api/catalog`;把 `data.ts` 的資料匯入資料庫 | 前台商品改由後台維護 |
 | 2 | 計價引擎搬到後端、`/api/quote`;促銷活動與折扣券的後台頁面 | 活動與券不必改程式就能上下架 |
-| 3 | 前台送出訂單表單;訂單 API 與後台頁面;賣場設定(取貨、付款、訂單規則、通知) | 可以開始接單 |
+| 3 | 會員登入;前台送出訂單表單與「我的訂單」;訂單 API 與後台頁面;賣場設定(取貨、付款、訂單規則、通知) | 可以開始接單 |
 | 4 | 總覽頁、批次改價、操作紀錄、店員角色 | 日常營運順手 |
 | 5 | 線上金流、推薦菜單、公告列、限定商品的折扣券、電子發票 | 依實際需求挑著做 |
