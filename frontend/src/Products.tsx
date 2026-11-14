@@ -300,8 +300,10 @@ export default function Products({ active, cart, setQty }: Props) {
     <main className="products">
       <CategoryTabs active={active} />
 
+      {/* 頁面標題給搜尋引擎與螢幕閱讀器;畫面上頁籤已經標出目前分類,不重複顯示 */}
+      <h1 className="sr-only">{category.name}</h1>
+
       <div className="toolbar">
-        <h1 className="page-title">{category.name}</h1>
         <input type="search" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={`搜尋${category.name}`} />
       </div>
 

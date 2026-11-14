@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fmt, productById } from './data';
 import Menu from './Menu';
-import { BrandPage, Home, NotFound, ProductPage } from './pages';
+import { BrandPage, NotFound, ProductPage } from './pages';
 import { quote } from './pricing';
 import Products from './Products';
 import { categoryPath, parseRoute } from './routes';
@@ -152,7 +152,6 @@ export default function App({ initialPath }: { initialPath: string }) {
         }
       />
       {/* 以網址當 key:換頁時重新掛載,捲動位置、篩選、數量都從頭開始 */}
-      {route.kind === 'home' && <Home />}
       {route.kind === 'category' && <Products key={path} active={route.category.id} cart={cart} setQty={setQty} />}
       {route.kind === 'product' && <ProductPage key={path} product={route.product} cart={cart} setQty={setQty} />}
       {route.kind === 'brand' && <BrandPage key={path} brand={route.brand} />}

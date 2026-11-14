@@ -505,12 +505,6 @@ a.tab:hover,
   flex: 1;
   min-width: 0;
 }
-/* 分類頁的標題:這一頁在講哪個分類(頁籤收進下拉時,頁籤列上看不到完整的分類名) */
-.page-title {
-  flex: none;
-  margin: 0 var(--s2) 0 0;
-  font-size: var(--fs-lg);
-}
 /* 規格欄位開關:開 = 白底 + 勾,關 = 灰底灰字(中性,不上色;不用刪除線,那看起來像「不能用」) */
 .chips {
   display: flex;
@@ -1219,10 +1213,18 @@ a.model-name {
   border-top: 1px solid var(--line);
 }
 
-/* ---------- 內容頁:首頁、商品頁、品牌頁(和商品清單用同一個捲動區) ---------- */
-.dialog-more {
-  margin: var(--s4) 0 0;
+/* 畫面上不顯示,但搜尋引擎與螢幕閱讀器讀得到 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
+
+/* ---------- 內容頁:商品頁、品牌頁(和商品清單用同一個捲動區) ---------- */
 .page {
   padding-top: var(--s4);
   line-height: 1.6;
@@ -1259,42 +1261,11 @@ a.model-name {
   margin-right: var(--s1);
   color: var(--faint);
 }
-.tiles,
 .link-list,
-.brand-list,
-.plain-list {
+.brand-list {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--s2);
-}
-.tile {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  height: 100%;
-  padding: var(--s3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-box);
-  background: var(--paper);
-  color: var(--fg);
-  box-shadow: var(--shadow-card);
-}
-.tile:hover {
-  background: var(--select);
-  text-decoration: none;
-}
-.tile strong {
-  font-size: var(--fs-md);
-}
-.tile span {
-  color: var(--muted);
-  font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
 }
 .link-list {
   border: 1px solid var(--line);
@@ -1324,9 +1295,6 @@ a.model-name {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s1) var(--s4);
-}
-.plain-list li + li {
-  margin-top: var(--s1);
 }
 .product-top {
   display: grid;

@@ -1,12 +1,12 @@
-// 首頁、商品頁、品牌頁、找不到頁面。分類頁是 Products(估價用的商品清單)。
+// 商品頁、品牌頁、找不到頁面:給從搜尋結果進來的人看的頁面。首頁與分類頁是 Products(估價用的商品清單)。
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { categories, fmt, products, promotions } from './data';
+import { categories, fmt, products } from './data';
 import { compatibleWith, itemPromo, salePrice } from './pricing';
 import { Gallery, ProductLinks, SpecTable } from './ProductDetail';
-import { brandPath, brands, categoryPath } from './routes';
+import { HOME_CATEGORY, brandPath, categoryPath } from './routes';
 import { Link } from './router';
-import type { Cart, Product } from './types';
+import type { Cart, Category, Product } from './types';
 
 type Crumb = { name: string; to?: string };
 
@@ -23,69 +23,12 @@ function Crumbs({ items }: { items: Crumb[] }) {
   );
 }
 
+const HOME: Crumb = { name: '首頁', to: '/' };
+// 首頁本身就是第一個分類:它的商品不必列兩層
+const trail = (category: Category): Crumb[] => (category === HOME_CATEGORY ? [HOME] : [HOME, { name: category.name, to: categoryPath(category) }]);
+
 function Page({ children }: { children: ReactNode }) {
   return <main className="products page">{children}</main>;
-}
-
-export function Home() {
-  const onSale = promotions.flatMap((x) => (x.type === 'item' ? products.filter((p) => p.id === x.productId) : []));
-  const offers = promotions.filter((x) => x.type !== 'item');
-
-  return (
-    <Page>
-      <h1>電腦零組件線上估價</h1>
-      <p className="lead">
-        挑選零件加入估價單,即時計算總價與優惠,並自動檢查處理器、主機板與機殼裝不裝得起來。估價單可以用連結分享或列印。
-      </p>
-
-      <h2>選擇零組件</h2>
-      <ul className="tiles">
-        {categories.map((c) => {
-          const items = products.filter((p) => p.cat === c.id);
-          return (
-            <li key={c.id}>
-              <Link className="tile" to={categoryPath(c)}>
-                <strong>{c.name}</strong>
-                <span>
-                  {items.length} 款 · {fmt(Math.min(...items.map(salePrice)))} 起
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-
-      {onSale.length > 0 && (
-        <>
-          <h2>限時優惠</h2>
-          <ProductLinks items={onSale} />
-        </>
-      )}
-
-      {offers.length > 0 && (
-        <>
-          <h2>合購與滿額優惠</h2>
-          <ul className="plain-list">
-            {offers.map((x) => (
-              <li key={x.label}>
-                {/* 滿額折的名稱已經寫了折多少;合購的名稱只有組合,補上金額 */}
-                {x.type === 'bundle' ? `${x.label},折 ${fmt(x.off)}` : x.label}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      <h2>品牌</h2>
-      <ul className="brand-list">
-        {brands.map((b) => (
-          <li key={b}>
-            <Link to={brandPath(b)}>{b}</Link>
-          </li>
-        ))}
-      </ul>
-    </Page>
-  );
 }
 
 type ProductPageProps = { product: Product; cart: Cart; setQty: (id: string, qty: number) => void };
@@ -101,7 +44,7 @@ export function ProductPage({ product, cart, setQty }: ProductPageProps) {
 
   return (
     <Page>
-      <Crumbs items={[{ name: '首頁', to: '/' }, { name: category.name, to: categoryPath(category) }, { name }]} />
+      <Crumbs items={[...trail(category), { name }]} />
 
       <article className="product">
         <div className="product-top">
@@ -166,7 +109,7 @@ export function BrandPage({ brand }: { brand: string }) {
   const items = products.filter((p) => p.brand === brand);
   return (
     <Page>
-      <Crumbs items={[{ name: '首頁', to: '/' }, { name: brand }]} />
+      <Crumbs items={[HOME, { name: brand }]} />
       <h1>{brand} 電腦零組件</h1>
       <p className="lead">共 {items.length} 款,點進商品頁可以看規格並加入估價單。</p>
       {categories

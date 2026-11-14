@@ -2,7 +2,7 @@
 // 伺服器端產生 HTML 時輸出成 <head> 裡的標籤;瀏覽器端換頁時套用到 document 上。兩邊用同一份資料。
 import { categories, fmt, products } from './data';
 import { salePrice } from './pricing';
-import { brandPath, categoryPath, productPath, routePath } from './routes';
+import { HOME_CATEGORY, brandPath, categoryPath, productPath, routePath } from './routes';
 import type { Route } from './routes';
 import { INDEXABLE, SITE_NAME, absolute } from './site';
 import type { Category, Product } from './types';
@@ -64,21 +64,22 @@ type Page = { title: string; description: string; type: 'website' | 'product'; i
 
 function describe(route: Route): Page {
   switch (route.kind) {
-    case 'home':
-      return {
-        title: `${SITE_NAME}|電腦零組件線上估價與相容性檢查`,
-        description: `線上挑選${categories
-          .slice(0, 6)
-          .map((c) => c.name)
-          .join('、')}等 ${products.length} 項電腦零組件,即時計算總價、套用優惠,並自動檢查處理器、主機板與機殼是否相容。`,
-        type: 'website',
-        ld: [{ '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_NAME, url: absolute('/') }],
-      };
     case 'category': {
       const c = route.category;
       const items = products.filter((p) => p.cat === c.id);
       const names = [...new Set(items.map((p) => p.brand))].slice(0, 5).join('、');
       const low = Math.min(...items.map(salePrice));
+      // 首頁(第一個分類):標題與描述講整個網站,不只這個分類
+      if (c === HOME_CATEGORY)
+        return {
+          title: `${SITE_NAME}|電腦零組件線上估價與相容性檢查`,
+          description: `線上挑選${categories
+            .slice(0, 6)
+            .map((x) => x.name)
+            .join('、')}等 ${products.length} 項電腦零組件,即時計算總價、套用優惠,並自動檢查處理器、主機板與機殼是否相容。`,
+          type: 'website',
+          ld: [{ '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_NAME, url: absolute('/') }, itemListLd(items)],
+        };
       return {
         title: `${c.name}價格與規格比較|${SITE_NAME}`,
         description: `比較 ${items.length} 款${c.name}的規格與價格,${fmt(low)} 起。品牌包含 ${names};可依${c.specs
@@ -109,7 +110,7 @@ function describe(route: Route): Page {
           productLd(p, c, description),
           breadcrumbLd([
             { name: '首頁', path: '/' },
-            { name: c.name, path: categoryPath(c) },
+            ...(c === HOME_CATEGORY ? [] : [{ name: c.name, path: categoryPath(c) }]),
             { name: fullName(p), path: productPath(p) },
           ]),
         ],

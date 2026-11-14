@@ -3,8 +3,6 @@ import { categories, fmt } from './data';
 import Modal from './Modal';
 import { salePrice } from './pricing';
 import { Gallery, SpecTable } from './ProductDetail';
-import { productPath } from './routes';
-import { Link } from './router';
 import type { Product } from './types';
 
 type Props = {
@@ -14,7 +12,7 @@ type Props = {
 };
 
 // 商品詳情的疊加框:大圖 + 縮圖列 | 商品描述 | 商品規格;底部是價格、數量與加入估價單。× 、Esc、點框外都能關閉。
-// 同樣的內容在商品頁(ProductPage)有完整的版本,框內留一個連結過去。
+// 同樣的內容在商品頁(ProductPage)有完整的版本,那是給從搜尋結果進來的人看的。
 export default function ProductDialog({ product, onClose, onAdd }: Props) {
   const [qty, setQty] = useState(1); // 這次要加入的數量
   const price = salePrice(product);
@@ -41,10 +39,6 @@ export default function ProductDialog({ product, onClose, onAdd }: Props) {
 
         <h3>商品規格</h3>
         <SpecTable product={product} category={category} />
-
-        <p className="dialog-more">
-          <Link to={productPath(product)}>查看完整商品頁與相容零件 ›</Link>
-        </p>
       </div>
 
       <footer className="dialog-foot">
