@@ -133,8 +133,9 @@ export default function App({ initialPath }: { initialPath: string }) {
   // 直接由網址進來的(搜尋結果、分享連結)沒有上一頁:關閉後換成該分類的清單
   const openedHere = useRef(false);
   const openDetail = (p: Product) => {
-    openedHere.current = true;
-    navigate(productPath(p));
+    // 已經開著詳情(從框底的商品卡換到另一個商品):取代目前這一筆瀏覽紀錄,關閉時才會回到清單而不是上一個商品
+    if (!detail) openedHere.current = true;
+    navigate(productPath(p), detail !== null);
   };
   const closeDetail = () => {
     if (openedHere.current) {

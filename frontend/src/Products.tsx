@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import CategoryTabs from './CategoryTabs';
 import { categories, fmt, products } from './data';
 import Modal from './Modal';
 import { itemPromo, salePrice } from './pricing';
+import { AddControl, ProductCard } from './ProductCard';
 import ProductDialog from './ProductDialog';
 import { productPath } from './routes';
 import { clientReady, isPlainClick } from './router';
@@ -58,56 +59,6 @@ function Thumb({ p }: { p: Product }) {
     <div className="thumb placeholder" aria-hidden="true">
       {p.brand.slice(0, 2).toUpperCase()}
     </div>
-  );
-}
-
-// 加入估價單的控制項,清單與格狀共用。
-// 原價(有促銷時,刪除線) 售價 [購物車鍵];加入後購物車鍵換成數量步進器(− 數量 +),減到 0 就是移除。
-function AddControl({ p, qty, setQty }: { p: Product; qty: number; setQty: (id: string, qty: number) => void }) {
-  const box = useRef<HTMLSpanElement>(null);
-  const refocus = useRef(false);
-  const promo = itemPromo(p.id);
-  const name = `${p.brand} ${p.name}`;
-  const added = qty > 0;
-
-  // 購物車鍵與步進器互換時,原本有焦點的鍵會消失:把焦點接到換上來的鍵
-  useEffect(() => {
-    if (!refocus.current) return;
-    refocus.current = false;
-    box.current?.querySelector<HTMLElement>(added ? '[data-step="up"]' : '.cart-btn')?.focus();
-  }, [added]);
-
-  const change = (n: number) => {
-    refocus.current = n > 0 !== added;
-    setQty(p.id, n);
-  };
-
-  return (
-    <span className="add" ref={box}>
-      <span className="add-price">
-        {promo && <s>{fmt(p.price)}</s>}
-        <strong>{fmt(salePrice(p))}</strong>
-      </span>
-      {added ? (
-        <span className="stepper" role="group" aria-label={`${name} 的數量`}>
-          <button aria-label={qty === 1 ? `移除 ${name}` : `減少 ${name}`} onClick={() => change(qty - 1)}>
-            −
-          </button>
-          <span aria-live="polite">{qty}</span>
-          <button data-step="up" aria-label={`增加 ${name}`} disabled={qty >= 99} onClick={() => change(qty + 1)}>
-            +
-          </button>
-        </span>
-      ) : (
-        <button className="cart-btn" title="加入估價單" aria-label={`加入 ${name}`} onClick={() => change(1)}>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M2 3h3l2.6 12.2a1 1 0 0 0 1 .8h9.3a1 1 0 0 0 1-.8L20.5 7H6" />
-            <circle cx="9.5" cy="20" r="1.4" />
-            <circle cx="17.5" cy="20" r="1.4" />
-          </svg>
-        </button>
-      )}
-    </span>
   );
 }
 
@@ -376,40 +327,9 @@ export default function Products({ active, detail, deferList, onOpen, onClose, c
       <div className="table-fit" ref={tableRef}>
         {grid ? (
           <ul className="grid">
-            {list.map((p) => {
-              const promo = itemPromo(p.id);
-              const qty = cart[p.id] ?? 0;
-              return (
-                <li key={p.id} className={qty > 0 ? 'card picked' : 'card'}>
-                  <button className="card-img" aria-label={`查看 ${p.brand} ${p.name} 的圖片與說明`} onClick={() => onOpen(p)}>
-                    {p.image ? (
-                      <img src={p.image} alt="" loading="lazy" />
-                    ) : (
-                      <span aria-hidden="true">{p.brand.slice(0, 2).toUpperCase()}</span>
-                    )}
-                  </button>
-                  <div className="card-name" title={p.name} onClick={() => onOpen(p)}>
-                    <span className="model-brand">{p.brand}</span>
-                    <a className="model-name" href={productPath(p)} onClick={(e) => quickView(e, p)}>
-                      {p.name}
-                    </a>
-                    {promo && <span className="tag">{promo.label}</span>}
-                  </div>
-                  {/* 沒有規格要顯示時也留著這一段:每張卡固定四段,同一排才對得齊 */}
-                  <dl className="card-specs">
-                    {cardSpecs.map((def) => (
-                      <div key={def.key}>
-                        <dt>{def.label}</dt>
-                        <dd title={show(valueOf(p, def.key), def)}>{show(valueOf(p, def.key), def)}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <div className="card-price">
-                    <AddControl p={p} qty={qty} setQty={setQty} />
-                  </div>
-                </li>
-              );
-            })}
+            {list.map((p) => (
+              <ProductCard key={p.id} p={p} specs={cardSpecs} qty={cart[p.id] ?? 0} setQty={setQty} onOpen={onOpen} />
+            ))}
           </ul>
         ) : (
           <div className="table-wrap">
@@ -571,7 +491,16 @@ export default function Products({ active, detail, deferList, onOpen, onClose, c
       )}
 
       {detail && (
-        <ProductDialog product={detail} onClose={onClose} onAdd={(n) => setQty(detail.id, (cart[detail.id] ?? 0) + n)} />
+        // 以商品當 key:從框底的商品卡換到另一個商品時重新掛載,捲回頂端、數量歸 1
+        <ProductDialog
+          key={detail.id}
+          product={detail}
+          cart={cart}
+          setQty={setQty}
+          onOpen={onOpen}
+          onClose={onClose}
+          onAdd={(n) => setQty(detail.id, (cart[detail.id] ?? 0) + n)}
+        />
       )}
     </main>
   );

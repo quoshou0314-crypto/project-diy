@@ -1144,6 +1144,11 @@ a.model-name {
   margin: var(--s4) 0 var(--s2);
   font-size: var(--fs-md);
 }
+/* 框底的商品卡(搭配零件、同類商品):沿用格狀清單的商品卡,框比較窄所以卡片小一點 */
+.dialog-body .grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s2);
+}
 .dialog-body hr + h3 {
   margin-top: 0;
 }
