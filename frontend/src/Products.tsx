@@ -13,6 +13,7 @@ import { usePopup } from './usePopup';
 type Props = {
   active: string;
   detail: Product | null; // 疊加框正在看的商品(由網址決定:/p/… 就是開著那個商品)
+  deferList: boolean; // 直接由商品網址進來、訪客還沒有任何動作:清單先不畫(見 App)
   onOpen: (p: Product) => void;
   onClose: () => void;
   cart: Cart;
@@ -111,7 +112,7 @@ function AddControl({ p, qty, setQty }: { p: Product; qty: number; setQty: (id: 
 }
 
 // 切換分類時由父層以 key 重新掛載,篩選與欄位開關自動歸零。
-export default function Products({ active, detail, onOpen, onClose, cart, setQty }: Props) {
+export default function Products({ active, detail, deferList, onOpen, onClose, cart, setQty }: Props) {
   const [filters, setFilters] = useState<Record<string, SpecValue[]>>({});
   const [off, setOff] = useState<string[]>([]); // 使用者關掉的規格欄
   const [pinned, setPinned] = useState<string[]>([]); // 使用者點開的規格欄(最近點的在前),寬度不夠時優先保留
@@ -171,6 +172,7 @@ export default function Products({ active, detail, onOpen, onClose, cart, setQty
   }, [category, inCategory]);
 
   const list = useMemo(() => {
+    if (deferList) return [];
     const kw = keyword.trim().toLowerCase();
     const out = inCategory.filter(
       (p) =>
@@ -188,7 +190,7 @@ export default function Products({ active, detail, onOpen, onClose, cart, setQty
         return sort.dir * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'zh-Hant'));
       });
     return out;
-  }, [inCategory, filters, keyword, sort]);
+  }, [inCategory, filters, keyword, sort, deferList]);
 
   // 選單開啟時:點選單外、按 Esc、捲動頁面都會關閉;↑ ↓ 在項目間移動
   usePopup(menu?.key ?? null, () => setMenu(null), menuRef, '.th-btn');
@@ -473,7 +475,7 @@ export default function Products({ active, detail, onOpen, onClose, cart, setQty
           </div>
         )}
       </div>
-      {list.length === 0 && <p className="empty">沒有符合條件的商品</p>}
+      {list.length === 0 && !deferList && <p className="empty">沒有符合條件的商品</p>}
 
       {menu && menuDef && (
         <div ref={menuRef} className="th-menu" role="menu" style={{ left: menu.x, top: menu.y, width: MENU_WIDTH }}>

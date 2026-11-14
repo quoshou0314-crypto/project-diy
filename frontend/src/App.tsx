@@ -71,9 +71,24 @@ export default function App({ initialPath }: { initialPath: string }) {
     setLoaded(true);
   }, [loaded]);
 
+  // 直接由商品網址進來時(搜尋結果、分享連結),這一頁的內容只有那個商品:背後的分類清單先不畫。
+  // 這樣每個商品網址的 HTML 內容各自獨立,不會夾帶同分類的整份清單。
+  // 訪客一有動作(移動滑鼠、觸控、按鍵)或換頁,清單就補上,之後和站內點開的疊加框完全相同。
+  const [listDeferred, setListDeferred] = useState(() => parseRoute(initialPath).kind === 'product');
+  useEffect(() => {
+    if (!listDeferred) return;
+    const show = () => setListDeferred(false);
+    const events = ['pointermove', 'pointerdown', 'touchstart', 'keydown', 'wheel'] as const;
+    events.forEach((e) => window.addEventListener(e, show, { once: true, passive: true }));
+    return () => events.forEach((e) => window.removeEventListener(e, show));
+  }, [listDeferred]);
+
   // 上一頁 / 下一頁
   useEffect(() => {
-    const onPop = () => setPath(location.pathname);
+    const onPop = () => {
+      setListDeferred(false);
+      setPath(location.pathname);
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
@@ -85,6 +100,7 @@ export default function App({ initialPath }: { initialPath: string }) {
   const navigate = useCallback((to: string, replace = false) => {
     if (to !== location.pathname) history[replace ? 'replaceState' : 'pushState'](null, '', to + location.hash);
     setPath(to);
+    setListDeferred(false);
     setSheetOpen(false);
   }, []);
   const router = useMemo(() => ({ path, navigate }), [path, navigate]);
@@ -169,7 +185,7 @@ export default function App({ initialPath }: { initialPath: string }) {
       />
       {/* 以分類當 key:切換分類時重新掛載(篩選歸零);開關商品詳情不重新掛載,清單的篩選與捲動位置留著 */}
       {category ? (
-        <Products key={category.id} active={category.id} detail={detail} onOpen={openDetail} onClose={closeDetail} cart={cart} setQty={setQty} />
+        <Products key={category.id} active={category.id} detail={detail} deferList={listDeferred} onOpen={openDetail} onClose={closeDetail} cart={cart} setQty={setQty} />
       ) : (
         <NotFound />
       )}
