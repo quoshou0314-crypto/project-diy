@@ -373,126 +373,34 @@ input[aria-invalid='true'] {
   overflow-y: auto; /* 只上下捲;表格依寬度決定欄數,不會左右捲 */
   padding: 0 14px 60px;
 }
-/* 頂列的類別頁籤(支援層級):頁籤是大類,點開下拉選底下的類別。
-   目前所在的大類:粗體 + 藍色底線(藍 = 目前位置),後面接目前的類別名 */
-.tabs-wrap {
-  position: relative;
-  margin: 0 -14px;
-}
-/* 頁籤放不下時可以左右捲:還有頁籤的那一邊蓋一段漸層加箭頭,提示「這邊還有」 */
-.tabs-wrap::before,
-.tabs-wrap::after {
-  position: absolute;
-  top: 0;
-  bottom: 1px;
-  z-index: 1;
-  width: 36px;
-  display: none;
-  align-items: center;
-  color: var(--muted);
-  font-size: var(--fs-lg);
-  pointer-events: none;
-}
-.tabs-wrap.more-left::before {
-  content: '‹';
-  display: flex;
-  left: 0;
-  padding-left: 6px;
-  background: linear-gradient(to right, var(--bg) 40%, transparent);
-}
-.tabs-wrap.more-right::after {
-  content: '›';
-  display: flex;
-  justify-content: flex-end;
-  right: 0;
-  padding-right: 6px;
-  background: linear-gradient(to left, var(--bg) 40%, transparent);
-}
+/* 類別頁籤:全部直接列出,一排放不下就折到下一排。目前所在的類別:粗體 + 藍色底線(藍 = 目前位置) */
 .tabs {
   display: flex;
-  height: var(--h-head);
-  gap: var(--s1);
+  flex-wrap: wrap;
+  gap: 0 var(--s1);
+  margin: 0 -14px;
   padding: 0 14px;
   border-bottom: 1px solid var(--line);
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 .tab {
   flex: none;
-  height: 100%;
-  padding: 0 var(--s3);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: none;
-  color: var(--muted);
-  font-size: var(--fs-md);
-  font-weight: 400;
-  white-space: nowrap;
-}
-/* 頁籤是連到分類頁的連結(收進下拉的大類才是按鍵):排版要和按鍵一樣 */
-a.tab {
   display: inline-flex;
   align-items: center;
+  height: var(--h-head); /* 只有一排時,底線和估價單標題列的分割線對齊 */
+  padding: 0 var(--s3);
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  white-space: nowrap;
 }
-a.tab:hover,
-.tab-menu a.item:hover {
+.tab:hover {
+  color: var(--fg);
   text-decoration: none;
-}
-.tab-menu a.item {
-  color: var(--fg);
-}
-.tab:hover:not(:disabled),
-.tab[aria-expanded='true'] {
-  background: none;
-  color: var(--fg);
 }
 .tab.on {
   color: var(--fg);
   font-weight: 600;
   border-bottom-color: var(--accent);
-}
-.tab-current {
-  font-weight: 400;
-  color: var(--muted);
-}
-.tab-current::before {
-  content: '›';
-  margin: 0 var(--s1);
-  color: var(--faint);
-}
-.tab-menu {
-  position: fixed;
-  z-index: 30;
-  min-width: 160px;
-  padding: var(--s1) 0;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--r-box);
-  box-shadow: var(--shadow-pop);
-}
-.tab-menu .item {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  gap: var(--s4);
-  width: 100%;
-  height: auto;
-  padding: 6px var(--s3) 6px 30px;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  font-weight: 400;
-  white-space: nowrap;
-}
-.tab-menu .item:hover:not(:disabled) {
-  background: var(--select);
-}
-.tab-menu .item[aria-current='page']::before {
-  content: '✓';
-  position: absolute;
-  left: var(--s3);
-  color: var(--accent);
 }
 .toolbar {
   display: flex;
@@ -1284,6 +1192,46 @@ a.model-name {
     overflow: visible;
     padding-bottom: 76px;
   }
+  /* 手機上頁籤會折成幾排:每排矮一點,少佔一些高度 */
+  .tab {
+    height: 40px;
+  }
+  .menu {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    display: none;
+  }
+  .menu.open {
+    display: flex;
+  }
+  .sheet-close {
+    display: inline-flex;
+  }
+  .mobilebar {
+    display: flex;
+    justify-content: space-between;
+    position: fixed;
+    left: var(--s3);
+    right: var(--s3);
+    bottom: var(--s3);
+    z-index: 20;
+    height: 44px;
+    padding: 0 var(--s4);
+    border-radius: var(--r-box);
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--inverse);
+    box-shadow: var(--shadow-pop);
+  }
+  .mobilebar:hover:not(:disabled) {
+    background: var(--accent-hi);
+  }
+  .mobilebar strong {
+    font-size: var(--fs-lg);
+  }
+}
 
 /* ---------- 觸控:窄螢幕或手指操作時,控制項放大到好按的尺寸(約 36–44px) ---------- */
 @media (max-width: 820px), (pointer: coarse) {
@@ -1335,7 +1283,6 @@ a.model-name {
   .stepper button {
     width: 30px;
   }
-  .tab-menu .item,
   .th-menu .item,
   .th-menu label {
     padding-top: 12px;

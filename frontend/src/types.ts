@@ -3,7 +3,7 @@ export type SpecValue = string | number;
 /** 規格定義:每個分類有哪些可篩選的規格。unit 為標準單位(顯示時接在數值後)。 */
 export type SpecDef = { key: string; label: string; unit?: string };
 
-/** group:收進哪一個下拉頁籤(例如「周邊配件」);沒有 group 的是 DIY 核心零組件,直接顯示成頁籤。 */
+/** group:所屬的大類(例如「周邊配件」);沒有 group 的是 DIY 核心零組件。目前頁籤全部攤開顯示,不依大類收合。 */
 export type Category = { id: string; name: string; group?: string; specs: SpecDef[] };
 
 export type Product = {
