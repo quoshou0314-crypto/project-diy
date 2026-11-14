@@ -4,7 +4,7 @@ import Modal from './Modal';
 import { compatibleWith, salePrice } from './pricing';
 import { ProductCard } from './ProductCard';
 import { Gallery, SpecTable } from './ProductDetail';
-import type { Cart, Product } from './types';
+import type { Cart, Product, SpecDef } from './types';
 
 type Props = {
   product: Product;
@@ -16,6 +16,7 @@ type Props = {
 };
 
 const MORE = 6; // 「其他同類商品」最多列幾張
+const NO_SPECS: SpecDef[] = []; // 框底的商品卡不列規格:只有圖、品名、價格與加入估價單
 
 // 商品詳情的疊加框:大圖 + 縮圖列 | 商品描述 | 商品規格 | 搭配零件與同類商品的商品卡;底部是價格、數量與加入估價單。× 、Esc、點框外都能關閉。
 // 疊加框開著時網址是這個商品的網址(/p/…),所以框的標題就是這一頁的主標題。
@@ -57,7 +58,7 @@ export default function ProductDialog({ product, cart, setQty, onOpen, onClose, 
                 <ProductCard
                   key={p.id}
                   p={p}
-                  specs={categories.find((c) => c.id === p.cat)!.specs}
+                  specs={NO_SPECS}
                   qty={cart[p.id] ?? 0}
                   setQty={setQty}
                   onOpen={onOpen}
