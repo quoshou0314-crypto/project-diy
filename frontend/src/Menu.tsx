@@ -43,7 +43,7 @@ export default function Menu({ open, onClose, q, active, onSelect, setQty, coupo
   return (
     <aside className={`menu${open ? ' open' : ''}`}>
       <header className="menu-head">
-        <h1>估價單</h1>
+        <h2>估價單</h2>
         {q.count > 0 && (
           <button className="link" onClick={onClear}>
             清空

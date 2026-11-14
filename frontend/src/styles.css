@@ -120,6 +120,18 @@ s {
   color: var(--muted);
   font-size: var(--fs-sm);
 }
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--r-ctl);
+}
 
 /* ---------- 外殼:頂列 › 估價單 | 商品 ---------- */
 .app {
@@ -139,6 +151,10 @@ nav.topbar {
 nav .brand {
   font-size: var(--fs-lg);
   font-weight: 700;
+  color: var(--fg);
+}
+nav .brand:hover {
+  text-decoration: none;
 }
 .shell {
   flex: 1;
@@ -163,7 +179,7 @@ nav .brand {
   padding: var(--s2) var(--s4);
   border-bottom: 1px solid var(--line);
 }
-.menu-head h1 {
+.menu-head h2 {
   flex: 1;
   margin: 0;
   font-size: var(--fs-lg);
@@ -414,6 +430,18 @@ input[aria-invalid='true'] {
   font-weight: 400;
   white-space: nowrap;
 }
+/* 頁籤是連到分類頁的連結(收進下拉的大類才是按鍵):排版要和按鍵一樣 */
+a.tab {
+  display: inline-flex;
+  align-items: center;
+}
+a.tab:hover,
+.tab-menu a.item:hover {
+  text-decoration: none;
+}
+.tab-menu a.item {
+  color: var(--fg);
+}
 .tab:hover:not(:disabled),
 .tab[aria-expanded='true'] {
   background: none;
@@ -460,7 +488,7 @@ input[aria-invalid='true'] {
 .tab-menu .item:hover:not(:disabled) {
   background: var(--select);
 }
-.tab-menu .item[aria-checked='true']::before {
+.tab-menu .item[aria-current='page']::before {
   content: '✓';
   position: absolute;
   left: var(--s3);
@@ -476,6 +504,12 @@ input[aria-invalid='true'] {
 .toolbar input {
   flex: 1;
   min-width: 0;
+}
+/* 分類頁的標題:這一頁在講哪個分類(頁籤收進下拉時,頁籤列上看不到完整的分類名) */
+.page-title {
+  flex: none;
+  margin: 0 var(--s2) 0 0;
+  font-size: var(--fs-lg);
 }
 /* 規格欄位開關:開 = 白底 + 勾,關 = 灰底灰字(中性,不上色;不用刪除線,那看起來像「不能用」) */
 .chips {
@@ -751,6 +785,10 @@ input[aria-invalid='true'] {
 }
 .cell-model.tappable {
   cursor: pointer;
+}
+/* 品名是連到商品頁的連結,但在清單裡看起來仍是品名:滑過才出現底線 */
+a.model-name {
+  color: inherit;
 }
 .model-name {
   display: -webkit-box;
@@ -1181,6 +1219,141 @@ input[aria-invalid='true'] {
   border-top: 1px solid var(--line);
 }
 
+/* ---------- 內容頁:首頁、商品頁、品牌頁(和商品清單用同一個捲動區) ---------- */
+.dialog-more {
+  margin: var(--s4) 0 0;
+}
+.page {
+  padding-top: var(--s4);
+  line-height: 1.6;
+}
+.page > *,
+.product > * {
+  max-width: 880px;
+}
+.page h1 {
+  margin: 0 0 var(--s2);
+  font-size: var(--fs-xl);
+  line-height: 1.3;
+}
+.page h2 {
+  margin: var(--s5) 0 var(--s2);
+  font-size: var(--fs-lg);
+}
+.page .lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  margin: 0 0 var(--s3);
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+}
+.crumbs li + li::before {
+  content: '›';
+  margin-right: var(--s1);
+  color: var(--faint);
+}
+.tiles,
+.link-list,
+.brand-list,
+.plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s2);
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  background: var(--paper);
+  color: var(--fg);
+  box-shadow: var(--shadow-card);
+}
+.tile:hover {
+  background: var(--select);
+  text-decoration: none;
+}
+.tile strong {
+  font-size: var(--fs-md);
+}
+.tile span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.link-list {
+  border: 1px solid var(--line);
+  border-radius: var(--r-box);
+  background: var(--paper);
+}
+.link-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--line);
+}
+.link-list li:last-child {
+  border-bottom: 0;
+}
+.link-list-price {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.brand-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+}
+.plain-list li + li {
+  margin-top: var(--s1);
+}
+.product-top {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--s5);
+  align-items: start;
+}
+.product-brand {
+  margin: 0 0 var(--s1);
+  color: var(--muted);
+}
+.product-info .dialog-price {
+  margin: var(--s3) 0;
+}
+.product-info .dialog-price strong {
+  font-size: var(--fs-xl);
+}
+.product-buy {
+  padding: 0;
+  border: 0;
+}
+.product-status {
+  min-height: 1.6em; /* 先留位置:加入後出現這行字時,下面的內容不會跳動 */
+  margin: var(--s2) 0 0;
+  color: var(--muted);
+}
+
 .mobilebar {
   display: none;
 }
@@ -1201,6 +1374,10 @@ input[aria-invalid='true'] {
   .products {
     overflow: visible;
     padding-bottom: 76px;
+  }
+  .product-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s4);
   }
   .menu {
     position: fixed;

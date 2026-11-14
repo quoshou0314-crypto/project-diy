@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { categories, fmt } from './data';
 import Modal from './Modal';
 import { salePrice } from './pricing';
+import { Gallery, SpecTable } from './ProductDetail';
+import { productPath } from './routes';
+import { Link } from './router';
 import type { Product } from './types';
 
 type Props = {
@@ -10,17 +13,12 @@ type Props = {
   onAdd: (qty: number) => void; // 把這個數量加進估價單
 };
 
-const PLACEHOLDERS = 4; // 沒有商品圖時先放幾格佔位圖
-
 // 商品詳情的疊加框:大圖 + 縮圖列 | 商品描述 | 商品規格;底部是價格、數量與加入估價單。× 、Esc、點框外都能關閉。
+// 同樣的內容在商品頁(ProductPage)有完整的版本,框內留一個連結過去。
 export default function ProductDialog({ product, onClose, onAdd }: Props) {
-  const [index, setIndex] = useState(0);
   const [qty, setQty] = useState(1); // 這次要加入的數量
   const price = salePrice(product);
   const category = categories.find((c) => c.id === product.cat)!;
-  const images = product.images?.length ? product.images : product.image ? [product.image] : [];
-  const count = images.length || PLACEHOLDERS;
-  const abbr = product.brand.slice(0, 2).toUpperCase();
 
   return (
     <Modal label={`${product.brand} ${product.name}`} onClose={onClose}>
@@ -34,29 +32,7 @@ export default function ProductDialog({ product, onClose, onAdd }: Props) {
       </header>
 
       <div className="dialog-body">
-        <div className="gallery-main">
-          {images.length > 0 ? (
-            <img src={images[index]} alt={`${product.name} 圖片 ${index + 1}`} />
-          ) : (
-            <div className="gallery-placeholder">
-              {abbr}
-              <span>圖片 {index + 1}</span>
-            </div>
-          )}
-        </div>
-        <div className="gallery-thumbs">
-          {Array.from({ length: count }, (_, i) => (
-            <button
-              key={i}
-              className={i === index ? 'gallery-thumb on' : 'gallery-thumb'}
-              aria-label={`圖片 ${i + 1}`}
-              aria-pressed={i === index}
-              onClick={() => setIndex(i)}
-            >
-              {images.length > 0 ? <img src={images[i]} alt="" /> : i + 1}
-            </button>
-          ))}
-        </div>
+        <Gallery product={product} />
 
         <hr />
 
@@ -64,20 +40,11 @@ export default function ProductDialog({ product, onClose, onAdd }: Props) {
         <p className="dialog-desc">{product.description ?? '尚無商品描述。'}</p>
 
         <h3>商品規格</h3>
-        <table className="dialog-specs">
-          <tbody>
-            <tr>
-              <th>品牌</th>
-              <td>{product.brand}</td>
-            </tr>
-            {category.specs.map((def) => (
-              <tr key={def.key}>
-                <th>{def.label}</th>
-                <td>{product.specs[def.key] === undefined ? '-' : `${product.specs[def.key]}${def.unit ?? ''}`}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <SpecTable product={product} category={category} />
+
+        <p className="dialog-more">
+          <Link to={productPath(product)}>查看完整商品頁與相容零件 ›</Link>
+        </p>
       </div>
 
       <footer className="dialog-foot">

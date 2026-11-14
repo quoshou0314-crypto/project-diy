@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { categories, fmt, productById } from './data';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { fmt, productById } from './data';
 import Menu from './Menu';
+import { BrandPage, Home, NotFound, ProductPage } from './pages';
 import { quote } from './pricing';
 import Products from './Products';
+import { categoryPath, parseRoute } from './routes';
+import { Link, RouterContext, clientReady, markClientReady } from './router';
+import { applyMeta, pageMeta } from './seo';
 import type { Cart } from './types';
 
 const STORAGE_KEY = 'diy-menu';
@@ -29,11 +33,19 @@ function loadState(): { cart: Cart; coupon: string } {
   return { cart: {}, coupon: '' };
 }
 
-export default function App() {
-  const [initial] = useState(loadState);
+const EMPTY: { cart: Cart; coupon: string } = { cart: {}, coupon: '' };
+
+// initialPath:伺服器端產生 HTML 時是要產生的網址;瀏覽器端是目前的網址
+export default function App({ initialPath }: { initialPath: string }) {
+  const [path, setPath] = useState(initialPath);
+  const route = useMemo(() => parseRoute(path), [path]);
+
+  // 估價單存在瀏覽器裡,伺服器輸出的畫面是空的估價單。接手伺服器輸出的那一次 render 要和它一致,
+  // 所以接手完成後才讀取;讀完之前(loaded = false)不寫回網址與儲存空間,免得把存著的估價單蓋掉。
+  const [initial] = useState(() => (clientReady() ? loadState() : EMPTY));
+  const [loaded, setLoaded] = useState(clientReady);
   const [cart, setCart] = useState<Cart>(initial.cart);
   const [coupon, setCoupon] = useState(initial.coupon);
-  const [active, setActive] = useState(categories[0].id);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [cleared, setCleared] = useState<{ cart: Cart; coupon: string } | null>(null); // 剛清空的估價單,留著給「復原」
 
@@ -50,9 +62,37 @@ export default function App() {
     };
   }, [sheetOpen]);
 
+  useEffect(() => {
+    markClientReady(); // 接手完成:之後掛載的元件可以直接讀瀏覽器裡的狀態
+    if (loaded) return;
+    const saved = loadState();
+    setCart(saved.cart);
+    setCoupon(saved.coupon);
+    setLoaded(true);
+  }, [loaded]);
+
+  // 上一頁 / 下一頁
+  useEffect(() => {
+    const onPop = () => setPath(location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // 換頁後更新標題、描述、正式網址與結構化資料
+  useEffect(() => applyMeta(pageMeta(route)), [route]);
+
+  // 站內換頁:不重新載入。估價單寫在 # 後面,換頁時帶著走
+  const navigate = useCallback((to: string) => {
+    if (to !== location.pathname) history.pushState(null, '', to + location.hash);
+    setPath(to);
+    setSheetOpen(false);
+  }, []);
+  const router = useMemo(() => ({ path, navigate }), [path, navigate]);
+
   const q = useMemo(() => quote(cart, coupon), [cart, coupon]);
 
   useEffect(() => {
+    if (!loaded) return;
     const m = Object.entries(cart)
       .map(([id, n]) => `${id}.${n}`)
       .join('-');
@@ -63,7 +103,7 @@ export default function App() {
     } catch {
       /* 無法寫入時不影響操作 */
     }
-  }, [cart, coupon]);
+  }, [cart, coupon, loaded, path]); // path:上一頁回到的網址可能帶著舊的估價單,換頁後一律改寫成目前的
 
   const setQty = (id: string, qty: number) => {
     setCleared(null); // 開始排新的估價單後,就不再提供復原
@@ -75,10 +115,16 @@ export default function App() {
     });
   };
 
+  // 估價單裡標示的「目前分類」:分類頁是該分類,商品頁是商品所屬的分類
+  const active = route.kind === 'category' ? route.category.id : route.kind === 'product' ? route.product.cat : '';
+
   return (
+    <RouterContext.Provider value={router}>
     <div className="app">
-      <nav className="topbar">
-        <span className="brand">DIY 估價</span>
+      <nav className="topbar" aria-label="網站">
+        <Link className="brand" to="/">
+          DIY 估價
+        </Link>
       </nav>
       <div className="shell">
       <Menu
@@ -86,10 +132,7 @@ export default function App() {
         onClose={() => setSheetOpen(false)}
         q={q}
         active={active}
-        onSelect={(id) => {
-          setActive(id);
-          setSheetOpen(false);
-        }}
+        onSelect={(id) => navigate(categoryPath({ id }))}
         setQty={setQty}
         coupon={coupon}
         setCoupon={setCoupon}
@@ -108,12 +151,18 @@ export default function App() {
             : undefined
         }
       />
-      <Products key={active} active={active} onSelect={setActive} cart={cart} setQty={setQty} />
+      {/* 以網址當 key:換頁時重新掛載,捲動位置、篩選、數量都從頭開始 */}
+      {route.kind === 'home' && <Home />}
+      {route.kind === 'category' && <Products key={path} active={route.category.id} cart={cart} setQty={setQty} />}
+      {route.kind === 'product' && <ProductPage key={path} product={route.product} cart={cart} setQty={setQty} />}
+      {route.kind === 'brand' && <BrandPage key={path} brand={route.brand} />}
+      {route.kind === 'notfound' && <NotFound />}
       </div>
       <button className="mobilebar" onClick={() => setSheetOpen(true)}>
         <span>估價單 · {q.count} 件</span>
         <strong>{fmt(q.total)}</strong>
       </button>
     </div>
+    </RouterContext.Provider>
   );
 }

@@ -5,12 +5,13 @@ import { categories, fmt, products } from './data';
 import Modal from './Modal';
 import { itemPromo, salePrice } from './pricing';
 import ProductDialog from './ProductDialog';
+import { productPath } from './routes';
+import { clientReady, isPlainClick } from './router';
 import type { Cart, Product, SpecDef, SpecValue } from './types';
 import { usePopup } from './usePopup';
 
 type Props = {
   active: string;
-  onSelect: (cat: string) => void;
   cart: Cart;
   setQty: (id: string, qty: number) => void;
 };
@@ -31,6 +32,8 @@ const COL_MODEL = 170;
 const COL_PRICE = 244; // 原價欄 50 + 間距 12 + 售價欄 68 + 間距 16 + 按鍵(觸控時 80)+ 儲存格內距,排成一行所需的寬度(對應 styles.css 的 .add)
 const COL_PRICE_NARROW = 176; // 售價 + 間距 12 + 按鍵 80 + 儲存格內距 // 手機放不下一行:價格在上、購物車鍵或步進器在下
 const COL_MIN = 96;
+// 伺服器端量不到寬度:先當成桌機寬度輸出,HTML 裡才有品牌與規格欄。瀏覽器接手後、畫面更新前會換成實際寬度。
+const SSR_WIDTH = 1100;
 
 type View = 'list' | 'grid';
 const VIEW_KEY = 'diy-view';
@@ -105,11 +108,11 @@ function AddControl({ p, qty, setQty }: { p: Product; qty: number; setQty: (id: 
 }
 
 // 切換分類時由父層以 key 重新掛載,篩選與欄位開關自動歸零。
-export default function Products({ active, onSelect, cart, setQty }: Props) {
+export default function Products({ active, cart, setQty }: Props) {
   const [filters, setFilters] = useState<Record<string, SpecValue[]>>({});
   const [off, setOff] = useState<string[]>([]); // 使用者關掉的規格欄
   const [pinned, setPinned] = useState<string[]>([]); // 使用者點開的規格欄(最近點的在前),寬度不夠時優先保留
-  const [width, setWidth] = useState(0); // 表格可用的寬度
+  const [width, setWidth] = useState(SSR_WIDTH); // 表格可用的寬度
   const tableRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{
     key: string;
@@ -120,7 +123,9 @@ export default function Products({ active, onSelect, cart, setQty }: Props) {
   const [sort, setSort] = useState<Sort>(null);
   const [detail, setDetail] = useState<Product | null>(null); // 疊加框正在看的商品
   const [sheet, setSheet] = useState(false); // 篩選面板
-  const [view, setViewState] = useState<View>(loadView); // 清單(表格)或格狀(商品卡)
+  // 清單(表格)或格狀(商品卡)。伺服器輸出的一律是清單;接手伺服器輸出時先照它 render,隨後換成使用者上次選的
+  const [view, setViewState] = useState<View>(() => (clientReady() ? loadView() : 'list'));
+  useLayoutEffect(() => setViewState(loadView()), []);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const category = categories.find((c) => c.id === active)!;
@@ -239,6 +244,14 @@ export default function Products({ active, onSelect, cart, setQty }: Props) {
   const cardSpecs = category.specs.filter((d) => !off.includes(d.key));
   const toggleCardSpec = (key: string) => setOff(off.includes(key) ? off.filter((k) => k !== key) : [...off, key]);
 
+  // 品名是連到商品頁的連結(搜尋引擎、另開分頁用);一般點擊則留在清單,開疊加框看詳情
+  const quickView = (e: ReactMouseEvent, p: Product) => {
+    if (!isPlainClick(e)) return;
+    e.preventDefault();
+    e.stopPropagation(); // 外層(手機的品名格、商品卡)也會開疊加框,不重複觸發
+    setDetail(p);
+  };
+
   // 再點一次同一個方向就取消排序
   const toggleSort = (key: string, dir: 1 | -1) => setSort(sort?.key === key && sort.dir === dir ? null : { key, dir });
 
@@ -285,9 +298,10 @@ export default function Products({ active, onSelect, cart, setQty }: Props) {
 
   return (
     <main className="products">
-      <CategoryTabs active={active} onSelect={onSelect} />
+      <CategoryTabs active={active} />
 
       <div className="toolbar">
+        <h1 className="page-title">{category.name}</h1>
         <input type="search" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={`搜尋${category.name}`} />
       </div>
 
@@ -370,7 +384,9 @@ export default function Products({ active, onSelect, cart, setQty }: Props) {
                   </button>
                   <div className="card-name" title={p.name} onClick={() => setDetail(p)}>
                     <span className="model-brand">{p.brand}</span>
-                    <span className="model-name">{p.name}</span>
+                    <a className="model-name" href={productPath(p)} onClick={(e) => quickView(e, p)}>
+                      {p.name}
+                    </a>
                     {promo && <span className="tag">{promo.label}</span>}
                   </div>
                   {/* 沒有規格要顯示時也留著這一段:每張卡固定四段,同一排才對得齊 */}
@@ -434,7 +450,9 @@ export default function Products({ active, onSelect, cart, setQty }: Props) {
                         onClick={stacked ? () => setDetail(p) : undefined}
                       >
                         {stacked && <span className="model-brand">{p.brand}</span>}
-                        <span className="model-name">{p.name}</span>
+                        <a className="model-name" href={productPath(p)} onClick={(e) => quickView(e, p)}>
+                          {p.name}
+                        </a>
                         {promo && <span className="tag">{promo.label}</span>}
                       </td>
                       {columns.map((def) => (

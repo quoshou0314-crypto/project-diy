@@ -1,16 +1,18 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { categories } from './data';
+import { categoryPath } from './routes';
+import { Link } from './router';
 import type { Category } from './types';
 import { usePopup } from './usePopup';
 
 type Props = {
   active: string;
-  onSelect: (cat: string) => void;
 };
 
 type Tab = { kind: 'cat'; cat: Category } | { kind: 'group'; name: string; items: Category[] };
 
+// 每個類別是一個連到分類頁的連結(搜尋引擎跟著連結走得到每個分類;一般點擊在瀏覽器端直接換頁)。
 // 頂列的類別頁籤:DIY 核心零組件(沒有 group 的類別)直接顯示成頁籤;
 // 其餘類別依 group 收進下拉頁籤(例如「周邊配件 ▾」),類別變多時只是下拉變長。
 const tabs: Tab[] = [];
@@ -24,7 +26,7 @@ for (const cat of categories) {
   else tabs.push({ kind: 'group', name: cat.group, items: [cat] });
 }
 
-export default function CategoryTabs({ active, onSelect }: Props) {
+export default function CategoryTabs({ active }: Props) {
   const [menu, setMenu] = useState<{ group: string; x: number; y: number } | null>(null);
   const [more, setMore] = useState({ left: false, right: false }); // 左右兩邊還有沒有捲出畫面的頁籤
   const navRef = useRef<HTMLElement>(null);
@@ -70,17 +72,15 @@ export default function CategoryTabs({ active, onSelect }: Props) {
         {tabs.map((t) => {
           if (t.kind === 'cat')
             return (
-              <button
+              <Link
                 key={t.cat.id}
+                to={categoryPath(t.cat)}
                 className={t.cat.id === active ? 'tab on' : 'tab'}
                 aria-current={t.cat.id === active ? 'page' : undefined}
-                onClick={() => {
-                  setMenu(null);
-                  onSelect(t.cat.id);
-                }}
+                onClick={() => setMenu(null)}
               >
                 {t.cat.name}
-              </button>
+              </Link>
             );
           const on = current.group === t.name;
           return (
@@ -102,18 +102,16 @@ export default function CategoryTabs({ active, onSelect }: Props) {
       {menu && openGroup?.kind === 'group' && (
         <div ref={menuRef} className="tab-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
           {openGroup.items.map((c) => (
-            <button
+            <Link
               key={c.id}
-              role="menuitemradio"
-              aria-checked={c.id === active}
+              to={categoryPath(c)}
+              role="menuitem"
+              aria-current={c.id === active ? 'page' : undefined}
               className="item"
-              onClick={() => {
-                setMenu(null);
-                onSelect(c.id);
-              }}
+              onClick={() => setMenu(null)}
             >
               <span>{c.name}</span>
-            </button>
+            </Link>
           ))}
         </div>
       )}

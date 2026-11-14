@@ -11,7 +11,7 @@ export function usePopup(key: string | null, close: () => void, menuRef: RefObje
   useEffect(() => {
     if (key === null) return;
     const trigger = document.activeElement as HTMLElement | null;
-    const items = () => [...(menuRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input') ?? [])];
+    const items = () => [...(menuRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input, a[href]') ?? [])];
     items()[0]?.focus();
 
     const outside = (e: Event) => {
