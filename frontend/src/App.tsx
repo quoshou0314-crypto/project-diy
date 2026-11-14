@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fmt, productById } from './data';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { categories, fmt, productById } from './data';
 import Menu from './Menu';
-import { BrandPage, NotFound, ProductPage } from './pages';
+import { NotFound } from './pages';
 import { quote } from './pricing';
 import Products from './Products';
-import { categoryPath, parseRoute } from './routes';
+import { categoryPath, parseRoute, productPath } from './routes';
 import { Link, RouterContext, clientReady, markClientReady } from './router';
 import { applyMeta, pageMeta } from './seo';
-import type { Cart } from './types';
+import type { Cart, Product } from './types';
 
 const STORAGE_KEY = 'diy-menu';
 
@@ -82,8 +82,8 @@ export default function App({ initialPath }: { initialPath: string }) {
   useEffect(() => applyMeta(pageMeta(route)), [route]);
 
   // 站內換頁:不重新載入。估價單寫在 # 後面,換頁時帶著走
-  const navigate = useCallback((to: string) => {
-    if (to !== location.pathname) history.pushState(null, '', to + location.hash);
+  const navigate = useCallback((to: string, replace = false) => {
+    if (to !== location.pathname) history[replace ? 'replaceState' : 'pushState'](null, '', to + location.hash);
     setPath(to);
     setSheetOpen(false);
   }, []);
@@ -115,8 +115,24 @@ export default function App({ initialPath }: { initialPath: string }) {
     });
   };
 
-  // 估價單裡標示的「目前分類」:分類頁是該分類,商品頁是商品所屬的分類
-  const active = route.kind === 'category' ? route.category.id : route.kind === 'product' ? route.product.cat : '';
+  // 商品的網址(/p/…)打開的是它所屬分類的清單,上面疊著這個商品的詳情
+  const detail = route.kind === 'product' ? route.product : null;
+  const category = route.kind === 'category' ? route.category : detail ? categories.find((c) => c.id === detail.cat)! : null;
+  const active = category?.id ?? '';
+
+  // 從清單點開的詳情:關閉 = 回上一頁(回到原本的清單與捲動位置)。
+  // 直接由網址進來的(搜尋結果、分享連結)沒有上一頁:關閉後換成該分類的清單
+  const openedHere = useRef(false);
+  const openDetail = (p: Product) => {
+    openedHere.current = true;
+    navigate(productPath(p));
+  };
+  const closeDetail = () => {
+    if (openedHere.current) {
+      openedHere.current = false;
+      history.back();
+    } else if (category) navigate(categoryPath(category), true);
+  };
 
   return (
     <RouterContext.Provider value={router}>
@@ -151,11 +167,12 @@ export default function App({ initialPath }: { initialPath: string }) {
             : undefined
         }
       />
-      {/* 以網址當 key:換頁時重新掛載,捲動位置、篩選、數量都從頭開始 */}
-      {route.kind === 'category' && <Products key={path} active={route.category.id} cart={cart} setQty={setQty} />}
-      {route.kind === 'product' && <ProductPage key={path} product={route.product} cart={cart} setQty={setQty} />}
-      {route.kind === 'brand' && <BrandPage key={path} brand={route.brand} />}
-      {route.kind === 'notfound' && <NotFound />}
+      {/* 以分類當 key:切換分類時重新掛載(篩選歸零);開關商品詳情不重新掛載,清單的篩選與捲動位置留著 */}
+      {category ? (
+        <Products key={category.id} active={category.id} detail={detail} onOpen={openDetail} onClose={closeDetail} cart={cart} setQty={setQty} />
+      ) : (
+        <NotFound />
+      )}
       </div>
       <button className="mobilebar" onClick={() => setSheetOpen(true)}>
         <span>估價單 · {q.count} 件</span>

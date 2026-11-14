@@ -1,13 +1,9 @@
 import { useState } from 'react';
-import { fmt } from './data';
-import { itemPromo, salePrice } from './pricing';
-import { productPath } from './routes';
-import { Link } from './router';
 import type { Category, Product } from './types';
 
 const PLACEHOLDERS = 4; // 沒有商品圖時先放幾格佔位圖
 
-// 商品圖:大圖 + 縮圖列。商品詳情的疊加框與商品頁共用。
+// 商品圖:大圖 + 縮圖列
 export function Gallery({ product }: { product: Product }) {
   const [index, setIndex] = useState(0);
   const images = product.images?.length ? product.images : product.image ? [product.image] : [];
@@ -59,24 +55,5 @@ export function SpecTable({ product, category }: { product: Product; category: C
         ))}
       </tbody>
     </table>
-  );
-}
-
-// 一串連到商品頁的連結:品牌 品名 … 售價
-export function ProductLinks({ items }: { items: Product[] }) {
-  return (
-    <ul className="link-list">
-      {items.map((p) => (
-        <li key={p.id}>
-          <Link to={productPath(p)}>
-            {p.brand} {p.name}
-          </Link>
-          <span className="link-list-price">
-            {itemPromo(p.id) && <s>{fmt(p.price)}</s>}
-            {fmt(salePrice(p))}
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }

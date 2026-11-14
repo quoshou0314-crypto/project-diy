@@ -12,6 +12,9 @@ import { usePopup } from './usePopup';
 
 type Props = {
   active: string;
+  detail: Product | null; // 疊加框正在看的商品(由網址決定:/p/… 就是開著那個商品)
+  onOpen: (p: Product) => void;
+  onClose: () => void;
   cart: Cart;
   setQty: (id: string, qty: number) => void;
 };
@@ -108,7 +111,7 @@ function AddControl({ p, qty, setQty }: { p: Product; qty: number; setQty: (id: 
 }
 
 // 切換分類時由父層以 key 重新掛載,篩選與欄位開關自動歸零。
-export default function Products({ active, cart, setQty }: Props) {
+export default function Products({ active, detail, onOpen, onClose, cart, setQty }: Props) {
   const [filters, setFilters] = useState<Record<string, SpecValue[]>>({});
   const [off, setOff] = useState<string[]>([]); // 使用者關掉的規格欄
   const [pinned, setPinned] = useState<string[]>([]); // 使用者點開的規格欄(最近點的在前),寬度不夠時優先保留
@@ -121,7 +124,6 @@ export default function Products({ active, cart, setQty }: Props) {
   } | null>(null);
   const [keyword, setKeyword] = useState('');
   const [sort, setSort] = useState<Sort>(null);
-  const [detail, setDetail] = useState<Product | null>(null); // 疊加框正在看的商品
   const [sheet, setSheet] = useState(false); // 篩選面板
   // 清單(表格)或格狀(商品卡)。伺服器輸出的一律是清單;接手伺服器輸出時先照它 render,隨後換成使用者上次選的
   const [view, setViewState] = useState<View>(() => (clientReady() ? loadView() : 'list'));
@@ -244,12 +246,12 @@ export default function Products({ active, cart, setQty }: Props) {
   const cardSpecs = category.specs.filter((d) => !off.includes(d.key));
   const toggleCardSpec = (key: string) => setOff(off.includes(key) ? off.filter((k) => k !== key) : [...off, key]);
 
-  // 品名是連到商品頁的連結(搜尋引擎、另開分頁用);一般點擊則留在清單,開疊加框看詳情
+  // 品名是連到商品網址的連結(搜尋引擎、另開分頁用);一般點擊不重新載入,直接開疊加框,網址跟著換成該商品的
   const quickView = (e: ReactMouseEvent, p: Product) => {
     if (!isPlainClick(e)) return;
     e.preventDefault();
     e.stopPropagation(); // 外層(手機的品名格、商品卡)也會開疊加框,不重複觸發
-    setDetail(p);
+    onOpen(p);
   };
 
   // 再點一次同一個方向就取消排序
@@ -300,8 +302,8 @@ export default function Products({ active, cart, setQty }: Props) {
     <main className="products">
       <CategoryTabs active={active} />
 
-      {/* 頁面標題給搜尋引擎與螢幕閱讀器;畫面上頁籤已經標出目前分類,不重複顯示 */}
-      <h1 className="sr-only">{category.name}</h1>
+      {/* 頁面標題給搜尋引擎與螢幕閱讀器;畫面上頁籤已經標出目前分類,不重複顯示。開著商品詳情時,主標題是商品名稱 */}
+      {!detail && <h1 className="sr-only">{category.name}</h1>}
 
       <div className="toolbar">
         <input type="search" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={`搜尋${category.name}`} />
@@ -377,14 +379,14 @@ export default function Products({ active, cart, setQty }: Props) {
               const qty = cart[p.id] ?? 0;
               return (
                 <li key={p.id} className={qty > 0 ? 'card picked' : 'card'}>
-                  <button className="card-img" aria-label={`查看 ${p.brand} ${p.name} 的圖片與說明`} onClick={() => setDetail(p)}>
+                  <button className="card-img" aria-label={`查看 ${p.brand} ${p.name} 的圖片與說明`} onClick={() => onOpen(p)}>
                     {p.image ? (
                       <img src={p.image} alt="" loading="lazy" />
                     ) : (
                       <span aria-hidden="true">{p.brand.slice(0, 2).toUpperCase()}</span>
                     )}
                   </button>
-                  <div className="card-name" title={p.name} onClick={() => setDetail(p)}>
+                  <div className="card-name" title={p.name} onClick={() => onOpen(p)}>
                     <span className="model-brand">{p.brand}</span>
                     <a className="model-name" href={productPath(p)} onClick={(e) => quickView(e, p)}>
                       {p.name}
@@ -441,7 +443,7 @@ export default function Products({ active, cart, setQty }: Props) {
                   return (
                     <tr key={p.id} className={qty > 0 ? 'picked' : ''}>
                       <td className="cell-thumb">
-                        <button className="thumb-btn" aria-label={`查看 ${p.brand} ${p.name} 的圖片與說明`} onClick={() => setDetail(p)}>
+                        <button className="thumb-btn" aria-label={`查看 ${p.brand} ${p.name} 的圖片與說明`} onClick={() => onOpen(p)}>
                           <Thumb p={p} />
                         </button>
                       </td>
@@ -449,7 +451,7 @@ export default function Products({ active, cart, setQty }: Props) {
                       <td
                         className={stacked ? 'cell-model tappable' : 'cell-model'}
                         title={p.name}
-                        onClick={stacked ? () => setDetail(p) : undefined}
+                        onClick={stacked ? () => onOpen(p) : undefined}
                       >
                         {stacked && <span className="model-brand">{p.brand}</span>}
                         <a className="model-name" href={productPath(p)} onClick={(e) => quickView(e, p)}>
@@ -567,7 +569,7 @@ export default function Products({ active, cart, setQty }: Props) {
       )}
 
       {detail && (
-        <ProductDialog product={detail} onClose={() => setDetail(null)} onAdd={(n) => setQty(detail.id, (cart[detail.id] ?? 0) + n)} />
+        <ProductDialog product={detail} onClose={onClose} onAdd={(n) => setQty(detail.id, (cart[detail.id] ?? 0) + n)} />
       )}
     </main>
   );

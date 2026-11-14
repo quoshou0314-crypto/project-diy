@@ -13,13 +13,12 @@ const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:not(:disa
 // Tab 只在框內循環、背景不捲動;關閉後焦點回到開啟它的那個鍵。
 export default function Modal({ label, onClose, children }: Props) {
   const box = useRef<HTMLDivElement>(null);
-  const opener = useRef(document.activeElement as HTMLElement | null); // 第一次 render 時的焦點 = 開啟它的鍵
   const close = useRef(onClose);
   close.current = onClose;
 
   useEffect(() => {
     const el = box.current!;
-    const back = opener.current;
+    const back = document.activeElement as HTMLElement | null; // 焦點還沒移進框內:這時的焦點 = 開啟它的鍵
     (el.querySelector<HTMLElement>('[data-autofocus]') ?? el).focus();
 
     const onKey = (e: KeyboardEvent) => {

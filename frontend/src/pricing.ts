@@ -1,6 +1,6 @@
 // 模擬計價:正式版由後端 POST /api/quote 計算,前端只顯示結果。
 // 套用順序:單品促銷 → 組合促銷 → 滿額折 → 折扣券(限一張)。
-import { coupons, fmt, productById, products, promotions } from './data';
+import { coupons, fmt, productById, promotions } from './data';
 import type { Cart, Product, Promotion } from './types';
 
 export type Line = { product: Product; qty: number; unit: number; total: number };
@@ -17,22 +17,6 @@ export type Quote = {
 
 // 機殼能裝的主機板:大機殼裝得下小板子
 const FORM_RANK: Record<string, number> = { ITX: 1, mATX: 2, ATX: 3 };
-
-export type Related = { label: string; items: Product[] };
-
-// 商品頁列出的「搭配得起來的零件」:和 compatibility() 用的是同一套規則(腳位、主機板與機殼尺寸)
-export function compatibleWith(p: Product): Related[] {
-  const of = (cat: string, ok: (x: Product) => boolean) => products.filter((x) => x.cat === cat && ok(x));
-  const rank = (x: Product) => FORM_RANK[String(x.specs.form)] ?? 0;
-  const out: Related[] = [];
-  if (p.cat === 'cpu') out.push({ label: `相容的主機板(${p.specs.socket})`, items: of('mb', (x) => x.specs.socket === p.specs.socket) });
-  if (p.cat === 'mb') {
-    out.push({ label: `相容的處理器(${p.specs.socket})`, items: of('cpu', (x) => x.specs.socket === p.specs.socket) });
-    out.push({ label: `裝得下的機殼(${p.specs.form})`, items: of('case', (x) => rank(x) >= rank(p)) });
-  }
-  if (p.cat === 'case') out.push({ label: `裝得下的主機板(最大 ${p.specs.form})`, items: of('mb', (x) => rank(x) > 0 && rank(x) <= rank(p)) });
-  return out.filter((g) => g.items.length > 0);
-}
 
 // 已選零件之間明顯裝不起來的組合(目前看得出來的:處理器與主機板腳位、主機板與機殼尺寸)
 function compatibility(lines: Line[]): string[] {

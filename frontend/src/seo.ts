@@ -2,7 +2,7 @@
 // 伺服器端產生 HTML 時輸出成 <head> 裡的標籤;瀏覽器端換頁時套用到 document 上。兩邊用同一份資料。
 import { categories, fmt, products } from './data';
 import { salePrice } from './pricing';
-import { HOME_CATEGORY, brandPath, categoryPath, productPath, routePath } from './routes';
+import { HOME_CATEGORY, categoryPath, productPath, routePath } from './routes';
 import type { Route } from './routes';
 import { INDEXABLE, SITE_NAME, absolute } from './site';
 import type { Category, Product } from './types';
@@ -113,22 +113,6 @@ function describe(route: Route): Page {
             ...(c === HOME_CATEGORY ? [] : [{ name: c.name, path: categoryPath(c) }]),
             { name: fullName(p), path: productPath(p) },
           ]),
-        ],
-      };
-    }
-    case 'brand': {
-      const items = products.filter((p) => p.brand === route.brand);
-      const cats = categories.filter((c) => items.some((p) => p.cat === c.id)).map((c) => c.name);
-      return {
-        title: `${route.brand} 電腦零組件價格|${SITE_NAME}`,
-        description: `${route.brand} 的${cats.join('、')}共 ${items.length} 款,列出規格與售價,可直接加入估價單計算總價。`,
-        type: 'website',
-        ld: [
-          breadcrumbLd([
-            { name: '首頁', path: '/' },
-            { name: route.brand, path: brandPath(route.brand) },
-          ]),
-          itemListLd(items),
         ],
       };
     }

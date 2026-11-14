@@ -12,7 +12,7 @@ type Props = {
 };
 
 // 商品詳情的疊加框:大圖 + 縮圖列 | 商品描述 | 商品規格;底部是價格、數量與加入估價單。× 、Esc、點框外都能關閉。
-// 同樣的內容在商品頁(ProductPage)有完整的版本,那是給從搜尋結果進來的人看的。
+// 疊加框開著時網址是這個商品的網址(/p/…),所以框的標題就是這一頁的主標題。
 export default function ProductDialog({ product, onClose, onAdd }: Props) {
   const [qty, setQty] = useState(1); // 這次要加入的數量
   const price = salePrice(product);
@@ -21,9 +21,7 @@ export default function ProductDialog({ product, onClose, onAdd }: Props) {
   return (
     <Modal label={`${product.brand} ${product.name}`} onClose={onClose}>
       <header className="dialog-head">
-        <h2>
-          {product.brand} {product.name}
-        </h2>
+        <h1>{`${product.brand} ${product.name}`}</h1>
         <button className="dialog-close" aria-label="關閉" onClick={onClose} data-autofocus>
           ×
         </button>
