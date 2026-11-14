@@ -71,17 +71,10 @@ export default function App({ initialPath }: { initialPath: string }) {
     setLoaded(true);
   }, [loaded]);
 
-  // 直接由商品網址進來時(搜尋結果、分享連結),這一頁的內容只有那個商品:背後的分類清單先不畫。
-  // 這樣每個商品網址的 HTML 內容各自獨立,不會夾帶同分類的整份清單。
-  // 訪客一有動作(移動滑鼠、觸控、按鍵)或換頁,清單就補上,之後和站內點開的疊加框完全相同。
+  // 直接由商品網址進來時(搜尋結果、分享連結),這一頁的內容只有那個商品:背後的分類清單不畫。
+  // 這樣每個商品網址的內容各自獨立,不會夾帶同分類的整份清單。
+  // 關閉詳情框(×、Esc、點框外、加入估價單)或換頁之後才畫清單;站內點開的詳情框不受影響,清單本來就在。
   const [listDeferred, setListDeferred] = useState(() => parseRoute(initialPath).kind === 'product');
-  useEffect(() => {
-    if (!listDeferred) return;
-    const show = () => setListDeferred(false);
-    const events = ['pointermove', 'pointerdown', 'touchstart', 'keydown', 'wheel'] as const;
-    events.forEach((e) => window.addEventListener(e, show, { once: true, passive: true }));
-    return () => events.forEach((e) => window.removeEventListener(e, show));
-  }, [listDeferred]);
 
   // 上一頁 / 下一頁
   useEffect(() => {

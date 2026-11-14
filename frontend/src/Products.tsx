@@ -13,7 +13,7 @@ import { usePopup } from './usePopup';
 type Props = {
   active: string;
   detail: Product | null; // 疊加框正在看的商品(由網址決定:/p/… 就是開著那個商品)
-  deferList: boolean; // 直接由商品網址進來、訪客還沒有任何動作:清單先不畫(見 App)
+  deferList: boolean; // 直接由商品網址進來、詳情框還沒關:清單先不畫(見 App)
   onOpen: (p: Product) => void;
   onClose: () => void;
   cart: Cart;
